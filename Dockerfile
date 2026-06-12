@@ -19,5 +19,5 @@ ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000
 
-# Aplica migraciones pendientes y arranca el servidor
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
+# Aplica migraciones, asegura el usuario admin (idempotente) y arranca el servidor
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run db:seed && npm run start"]
