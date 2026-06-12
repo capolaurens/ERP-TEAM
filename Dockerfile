@@ -6,6 +6,9 @@ RUN apk add --no-cache libc6-compat openssl
 
 # Dependencias (incluye devDependencies: hacen falta para compilar y para prisma)
 COPY package.json package-lock.json ./
+# El esquema de Prisma debe estar ANTES de `npm ci`: el postinstall ejecuta `prisma generate`.
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 RUN npm ci
 
 # Código y compilación (prisma generate + next build)
