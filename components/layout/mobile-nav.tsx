@@ -26,12 +26,8 @@ export function MobileNav({ role }: { role: Role }) {
           />
           <div className="absolute left-0 top-0 flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground shadow-xl">
             <div className="flex h-16 items-center justify-between px-5">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
-                  N
-                </div>
-                <span className="text-lg font-semibold">Navyx</span>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/navyx_logo.avif" alt="Navyx" className="h-7 w-auto" />
               <button
                 onClick={() => setOpen(false)}
                 className="text-sidebar-muted hover:text-white"
