@@ -26,7 +26,7 @@ export default async function TareasPage() {
   ]);
 
   const now = Date.now();
-  const tasks: TaskCardData[] = tasksRaw.map((t) => ({
+  const all: TaskCardData[] = tasksRaw.map((t) => ({
     id: t.id,
     title: t.title,
     status: t.status,
@@ -39,6 +39,10 @@ export default async function TareasPage() {
     projectName: t.project?.name ?? null,
   }));
 
+  // Las tareas "Hecho" se consideran completadas/archivadas: fuera del tablero activo.
+  const tasks = all.filter((t) => t.status !== "DONE");
+  const completed = all.filter((t) => t.status === "DONE");
+
   return (
     <div className="space-y-6">
       <div>
@@ -49,6 +53,7 @@ export default async function TareasPage() {
       </div>
       <TasksView
         tasks={tasks}
+        completed={completed}
         projects={projects.map((p) => ({ id: p.id, name: p.name, team: p.team }))}
         members={members.map((m) => ({ id: m.id, name: m.name, team: m.team! }))}
         role={user.role}

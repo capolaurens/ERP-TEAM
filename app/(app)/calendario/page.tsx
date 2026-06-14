@@ -9,7 +9,7 @@ export default async function CalendarioPage() {
   const teams = visibleTeams(user);
 
   const tasksRaw = await prisma.task.findMany({
-    where: { team: { in: teams }, dueDate: { not: null } },
+    where: { team: { in: teams }, dueDate: { not: null }, status: { not: "DONE" } },
     select: { id: true, title: true, dueDate: true, status: true, priority: true },
   });
 

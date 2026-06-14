@@ -50,6 +50,7 @@ export function TaskBoard({ tasks }: { tasks: TaskCardData[] }) {
 
   return (
     <DndContext
+      id="task-board"
       sensors={sensors}
       onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
       onDragEnd={onDragEnd}
@@ -88,7 +89,9 @@ function Column({ status, tasks }: { status: TaskStatus; tasks: TaskCardData[] }
         ))}
         {tasks.length === 0 && (
           <div className="rounded-lg border border-dashed border-border py-6 text-center text-xs text-muted-foreground">
-            Arrastra tareas aquí
+            {status === "DONE"
+              ? "Suelta aquí para completar y archivar"
+              : "Arrastra tareas aquí"}
           </div>
         )}
       </div>

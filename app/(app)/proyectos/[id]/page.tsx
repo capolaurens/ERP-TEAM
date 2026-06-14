@@ -23,7 +23,7 @@ export default async function ProjectDetailPage({
 
   const [tasksRaw, members] = await Promise.all([
     prisma.task.findMany({
-      where: { projectId: id },
+      where: { projectId: id, status: { not: "DONE" } },
       include: { assignee: true, project: true },
       orderBy: [{ order: "asc" }, { createdAt: "desc" }],
     }),
