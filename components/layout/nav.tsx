@@ -7,17 +7,28 @@ import {
   CheckSquare,
   FolderKanban,
   Calendar,
+  Camera,
   Users,
   Settings,
+  type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 
-export const NAV = [
-  { href: "/", label: "Panel", icon: LayoutDashboard, adminOnly: false },
-  { href: "/tareas", label: "Tareas", icon: CheckSquare, adminOnly: false },
-  { href: "/proyectos", label: "Proyectos", icon: FolderKanban, adminOnly: false },
-  { href: "/calendario", label: "Calendario", icon: Calendar, adminOnly: false },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  adminOnly?: boolean;
+  roles?: Role[];
+};
+
+export const NAV: NavItem[] = [
+  { href: "/", label: "Panel", icon: LayoutDashboard },
+  { href: "/tareas", label: "Tareas", icon: CheckSquare },
+  { href: "/proyectos", label: "Proyectos", icon: FolderKanban },
+  { href: "/calendario", label: "Calendario", icon: Calendar },
+  { href: "/feed", label: "Feed IG", icon: Camera, roles: ["ADMIN", "MARKETING"] },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users, adminOnly: true },
   { href: "/admin/ajustes", label: "Ajustes", icon: Settings, adminOnly: true },
 ];
@@ -30,7 +41,11 @@ export function NavLinks({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const items = NAV.filter((item) => !item.adminOnly || role === "ADMIN");
+  const items = NAV.filter((item) => {
+    if (item.adminOnly) return role === "ADMIN";
+    if (item.roles) return item.roles.includes(role);
+    return true;
+  });
 
   return (
     <nav className="flex-1 space-y-1 px-3 py-2">
