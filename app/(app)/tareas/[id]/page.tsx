@@ -15,6 +15,7 @@ import { CommentForm } from "./comment-form";
 import { DeleteTaskButton } from "./delete-task-button";
 import { AttachmentUploader } from "./attachment-uploader";
 import { deleteAttachment } from "./attachment-actions";
+import { TimeTracker } from "./time-tracker";
 
 function activityText(type: ActivityType, meta: unknown): string {
   const m = (meta ?? {}) as Record<string, unknown>;
@@ -57,9 +58,31 @@ export default async function TaskDetailPage({
         orderBy: { createdAt: "desc" },
         take: 40,
       },
+      timeEntries: {
+        include: { user: true },
+        orderBy: { startedAt: "desc" },
+      },
     },
   });
   if (!task || !canAccessTeam(user, task.team)) notFound();
+
+  const running = await prisma.timeEntry.findFirst({
+    where: { userId: user.id, endedAt: null },
+  });
+  const completedTime = task.timeEntries.filter((e) => e.endedAt);
+  const totalSec = completedTime.reduce((a, e) => a + e.durationSec, 0);
+  const aiSec = completedTime
+    .filter((e) => e.withAI)
+    .reduce((a, e) => a + e.durationSec, 0);
+  const timeEntries = completedTime.map((e) => ({
+    id: e.id,
+    userName: e.user?.name ?? "Usuario",
+    durationSec: e.durationSec,
+    withAI: e.withAI,
+    note: e.note,
+    when: formatRelative(e.createdAt),
+    canDelete: e.userId === user.id || user.role === "ADMIN",
+  }));
 
   const driveConfigured = isDriveConfigured();
 
@@ -161,6 +184,29 @@ export default async function TaskDetailPage({
         </div>
 
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Control de tiempo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TimeTracker
+                taskId={task.id}
+                running={
+                  running
+                    ? {
+                        taskId: running.taskId ?? "",
+                        startedAt: running.startedAt.toISOString(),
+                      }
+                    : null
+                }
+                entries={timeEntries}
+                totalSec={totalSec}
+                aiSec={aiSec}
+                noAiSec={totalSec - aiSec}
+              />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Actividad</CardTitle>

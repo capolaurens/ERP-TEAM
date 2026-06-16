@@ -65,6 +65,7 @@ model User {
   comments        Comment[]
   attachments     Attachment[]
   activities      Activity[]
+  timeEntries     TimeEntry[]
 
   @@index([role])
   @@index([team])
@@ -112,6 +113,7 @@ model Task {
   comments    Comment[]
   attachments Attachment[]
   activities  Activity[]
+  timeEntries TimeEntry[]
 
   @@index([team])
   @@index([status])
@@ -178,4 +180,22 @@ model Setting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model TimeEntry {
+  id          String    @id @default(cuid())
+  taskId      String?
+  task        Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  durationSec Int       @default(0)
+  withAI      Boolean   @default(false)
+  note        String?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([endedAt])
 }
