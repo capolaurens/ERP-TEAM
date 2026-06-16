@@ -21,9 +21,9 @@ type RoomKey = "CEO" | "MEETING" | "MARKETING" | "DIGITAL3D";
 /*  Bots de la sala de reuniones (placeholder — editar con los reales) */
 /* ------------------------------------------------------------------ */
 const BOTS: { id: string; name: string; short: string; seed: string }[] = [
-  { id: "ironman", name: "IRONMAN Bot", short: "IRONMAN", seed: "ironman-navyx" },
-  { id: "asistente", name: "Asistente Navyx", short: "Asistente", seed: "navyx-helper" },
-  { id: "ventas", name: "Bot Comercial", short: "Comercial", seed: "navyx-sales" },
+  { id: "asistente", name: "Asistente", short: "Asistente", seed: "navyx-helper" },
+  { id: "comercial", name: "Comercial", short: "Comercial", seed: "navyx-sales" },
+  { id: "setter", name: "Setter", short: "Setter", seed: "navyx-setter" },
 ];
 
 /* Orden de asientos para repartir los bots por la mesa (no contiguos). */
