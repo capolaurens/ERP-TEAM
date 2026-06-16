@@ -7,7 +7,6 @@ import {
   CheckSquare,
   FolderKanban,
   Calendar,
-  Camera,
   Users,
   Settings,
   type LucideIcon,
@@ -28,7 +27,6 @@ export const NAV: NavItem[] = [
   { href: "/tareas", label: "Tareas", icon: CheckSquare },
   { href: "/proyectos", label: "Proyectos", icon: FolderKanban },
   { href: "/calendario", label: "Calendario", icon: Calendar },
-  { href: "/feed", label: "Feed IG", icon: Camera, roles: ["ADMIN", "MARKETING"] },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users, adminOnly: true },
   { href: "/admin/ajustes", label: "Ajustes", icon: Settings, adminOnly: true },
 ];

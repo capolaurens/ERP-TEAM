@@ -65,7 +65,6 @@ model User {
   comments        Comment[]
   attachments     Attachment[]
   activities      Activity[]
-  instagramPosts  InstagramPost[]
 
   @@index([role])
   @@index([team])
@@ -179,19 +178,4 @@ model Setting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
-}
-
-model InstagramPost {
-  id          String    @id @default(cuid())
-  imageUrl    String?
-  caption     String?
-  status      String    @default("idea") // idea | planned | published
-  scheduledAt DateTime?
-  order       Int       @default(0)
-  createdById String?
-  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([order])
 }
