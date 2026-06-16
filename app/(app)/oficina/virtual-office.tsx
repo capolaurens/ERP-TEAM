@@ -3,10 +3,17 @@
 import { useEffect, useState } from "react";
 import { Wifi } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/rbac";
+import { dicebearUrl, effectiveSeed } from "@/lib/avatars";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Role } from "@/generated/prisma/enums";
 
-type OnlineUser = { id: string; name: string; role: Role; team: string | null };
+type OnlineUser = {
+  id: string;
+  name: string;
+  role: Role;
+  team: string | null;
+  avatarSeed?: string | null;
+};
 
 type RoomKey = "CEO" | "CFO" | "MARKETING" | "DIGITAL3D";
 
@@ -28,10 +35,6 @@ function roomFor(u: OnlineUser): RoomKey {
   if (u.role === "SALES") return "CFO";
   if (u.role === "DESIGN") return "DIGITAL3D";
   return "MARKETING";
-}
-
-function avatarUrl(seed: string) {
-  return `https://api.dicebear.com/9.x/pixel-art/svg?seed=${encodeURIComponent(seed)}&radius=10`;
 }
 
 export function VirtualOffice({ meId }: { meId: string }) {
@@ -123,7 +126,7 @@ export function VirtualOffice({ meId }: { meId: string }) {
                         <div key={u.id} className="flex flex-col items-center">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={avatarUrl(u.name || u.id)}
+                            src={dicebearUrl(effectiveSeed(u.avatarSeed, u.name || u.id))}
                             alt={u.name}
                             className="size-14 [image-rendering:pixelated] drop-shadow"
                             style={{

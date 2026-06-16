@@ -1,30 +1,83 @@
-import { Timer, Sparkles, Clock, CalendarDays } from "lucide-react";
+import { Timer, Sparkles, Clock, CalendarDays, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/session";
-import { visibleTeams, isAdmin } from "@/lib/rbac";
+import { requireAdmin } from "@/lib/session";
+import { visibleTeams, ROLE_LABELS } from "@/lib/rbac";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDuration } from "@/lib/time";
+import type { Role } from "@/generated/prisma/enums";
+
+const TZ = "Europe/Madrid"; // las horas se calculan en hora de España
+const DAY_MS = 24 * 3600 * 1000;
 
 export default async function TiempoPage() {
-  const user = await requireAuth();
+  const user = await requireAdmin();
   const teams = visibleTeams(user);
 
+  // ---------- Asistencia: horas conectadas por día (últimos 7 días) ----------
+  const dayKeyFmt = new Intl.DateTimeFormat("sv-SE", { timeZone: TZ }); // YYYY-MM-DD
+  const dayLabelFmt = new Intl.DateTimeFormat("es-ES", {
+    timeZone: TZ,
+    weekday: "short",
+    day: "numeric",
+  });
+  const now = Date.now();
+  const todayKey = dayKeyFmt.format(new Date(now));
+  const days: { key: string; label: string }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now - i * DAY_MS);
+    days.push({ key: dayKeyFmt.format(d), label: dayLabelFmt.format(d) });
+  }
+  const weekStart = new Date(now - 7 * DAY_MS);
+
+  const sessions = await prisma.workSession.findMany({
+    where: { startedAt: { gte: weekStart } },
+    include: { user: { select: { id: true, name: true, role: true } } },
+  });
+
+  type AttRow = {
+    name: string;
+    role: Role;
+    perDay: Map<string, number>;
+    total: number;
+  };
+  const att = new Map<string, AttRow>();
+  for (const s of sessions) {
+    if (!s.user) continue;
+    const end = s.endedAt ?? s.lastSeenAt;
+    const sec = Math.max(
+      0,
+      Math.floor((end.getTime() - s.startedAt.getTime()) / 1000),
+    );
+    if (sec <= 0) continue;
+    const key = dayKeyFmt.format(s.startedAt);
+    const row =
+      att.get(s.user.id) ??
+      ({ name: s.user.name, role: s.user.role, perDay: new Map(), total: 0 } as AttRow);
+    row.perDay.set(key, (row.perDay.get(key) ?? 0) + sec);
+    row.total += sec;
+    att.set(s.user.id, row);
+  }
+  const attRows = [...att.values()].sort((a, b) => b.total - a.total);
+  const todayTotalAll = attRows.reduce(
+    (acc, r) => acc + (r.perDay.get(todayKey) ?? 0),
+    0,
+  );
+  const weekTotalAll = attRows.reduce((acc, r) => acc + r.total, 0);
+
+  // ---------- Tiempo por tarea + comparativa IA (registrado con cronómetro) ----------
   const entries = await prisma.timeEntry.findMany({
     where: { endedAt: { not: null }, task: { team: { in: teams } } },
     include: { task: { include: { project: true } }, user: true },
   });
 
-  const now = Date.now();
-  const weekAgo = now - 7 * 24 * 3600 * 1000;
-
+  const weekAgo = now - 7 * DAY_MS;
   let total = 0;
   let weekTotal = 0;
   let aiSec = 0;
   let noAiSec = 0;
   const aiTasks = new Set<string>();
   const noAiTasks = new Set<string>();
-  const perUser = new Map<string, { name: string; sec: number }>();
   const perTask = new Map<
     string,
     { title: string; project: string | null; sec: number; aiSec: number }
@@ -40,9 +93,6 @@ export default async function TiempoPage() {
       noAiSec += e.durationSec;
       if (e.taskId) noAiTasks.add(e.taskId);
     }
-    const u = perUser.get(e.userId) ?? { name: e.user?.name ?? "Usuario", sec: 0 };
-    u.sec += e.durationSec;
-    perUser.set(e.userId, u);
     if (e.taskId) {
       const t = perTask.get(e.taskId) ?? {
         title: e.task?.title ?? "Tarea",
@@ -62,44 +112,140 @@ export default async function TiempoPage() {
     avgAi > 0 && avgNoAi > 0
       ? Math.round(((avgNoAi - avgAi) / avgNoAi) * 100)
       : null;
-
-  const usersSorted = [...perUser.values()].sort((a, b) => b.sec - a.sec);
   const tasksSorted = [...perTask.values()]
     .sort((a, b) => b.sec - a.sec)
     .slice(0, 12);
-
-  const stats = [
-    { label: "Total registrado", value: formatDuration(total), icon: Timer, color: "bg-slate-100 text-slate-600" },
-    { label: "Esta semana", value: formatDuration(weekTotal), icon: CalendarDays, color: "bg-blue-100 text-blue-600" },
-    { label: "Con IA", value: formatDuration(aiSec), icon: Sparkles, color: "bg-primary/10 text-primary" },
-    { label: "Sin IA", value: formatDuration(noAiSec), icon: Clock, color: "bg-slate-100 text-slate-600" },
-  ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Tiempo</h1>
         <p className="text-muted-foreground">
-          {isAdmin(user)
-            ? "Horas del equipo y comparativa de productividad."
-            : "Horas de tu equipo y comparativa de productividad."}
+          Horas de conexión del equipo (prácticas) y productividad. Solo
+          administradores.
         </p>
       </div>
 
-      {total === 0 ? (
+      {/* ---------- Asistencia ---------- */}
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-12 text-center text-muted-foreground">
-            <Timer className="size-8" />
-            <p>
-              Aún no hay tiempo registrado. Usa el cronómetro «Empezar» en cada
-              tarea (marcando «Con IA» cuando uses inteligencia artificial).
-            </p>
+          <CardContent className="flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-green-100 text-green-600">
+              <Clock className="size-5" />
+            </div>
+            <div>
+              <div className="text-2xl font-semibold">
+                {formatDuration(todayTotalAll)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Conectado hoy (equipo)
+              </div>
+            </div>
           </CardContent>
         </Card>
-      ) : (
+        <Card>
+          <CardContent className="flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+              <CalendarDays className="size-5" />
+            </div>
+            <div>
+              <div className="text-2xl font-semibold">
+                {formatDuration(weekTotalAll)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Conectado últimos 7 días
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="size-5" /> Horas de prácticas por día
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {attRows.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Aún no hay registros de conexión. Las horas se cuentan
+              automáticamente desde que cada persona abre el ERP hasta que lo
+              cierra.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                    <th className="py-2 pr-3 font-medium">Persona</th>
+                    {days.map((d) => (
+                      <th
+                        key={d.key}
+                        className={
+                          "px-2 py-2 text-center font-medium capitalize " +
+                          (d.key === todayKey ? "text-primary" : "")
+                        }
+                      >
+                        {d.label}
+                        {d.key === todayKey ? " · hoy" : ""}
+                      </th>
+                    ))}
+                    <th className="py-2 pl-3 text-right font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attRows.map((r, idx) => (
+                    <tr
+                      key={idx}
+                      className="border-b border-border/60 last:border-0"
+                    >
+                      <td className="py-2 pr-3">
+                        <div className="font-medium">{r.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {ROLE_LABELS[r.role] ?? r.role}
+                        </div>
+                      </td>
+                      {days.map((d) => {
+                        const sec = r.perDay.get(d.key) ?? 0;
+                        return (
+                          <td
+                            key={d.key}
+                            className={
+                              "px-2 py-2 text-center tabular-nums " +
+                              (sec === 0
+                                ? "text-muted-foreground/40"
+                                : d.key === todayKey
+                                  ? "font-medium text-primary"
+                                  : "")
+                            }
+                          >
+                            {sec === 0 ? "—" : formatDuration(sec)}
+                          </td>
+                        );
+                      })}
+                      <td className="py-2 pl-3 text-right font-semibold tabular-nums">
+                        {formatDuration(r.total)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ---------- Productividad por tarea (cronómetro) ---------- */}
+      {total > 0 && (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {stats.map((s) => {
+            {[
+              { label: "Total en tareas", value: formatDuration(total), icon: Timer, color: "bg-slate-100 text-slate-600" },
+              { label: "Tareas: esta semana", value: formatDuration(weekTotal), icon: CalendarDays, color: "bg-blue-100 text-blue-600" },
+              { label: "Con IA", value: formatDuration(aiSec), icon: Sparkles, color: "bg-primary/10 text-primary" },
+              { label: "Sin IA", value: formatDuration(noAiSec), icon: Clock, color: "bg-slate-100 text-slate-600" },
+            ].map((s) => {
               const Icon = s.icon;
               return (
                 <Card key={s.label}>
@@ -165,57 +311,34 @@ export default async function TiempoPage() {
                   )}
                 </p>
               )}
-              {(avgAi === 0 || avgNoAi === 0) && (
-                <p className="text-xs text-muted-foreground">
-                  Para comparar, registra tiempo en tareas con IA y sin IA.
-                </p>
-              )}
             </CardContent>
           </Card>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Horas por persona</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="divide-y divide-border text-sm">
-                  {usersSorted.map((u) => (
-                    <li key={u.name} className="flex items-center justify-between py-2">
-                      <span>{u.name}</span>
-                      <span className="font-medium">{formatDuration(u.sec)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Horas por tarea</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="divide-y divide-border text-sm">
-                  {tasksSorted.map((t, i) => (
-                    <li key={i} className="flex items-center justify-between gap-3 py-2">
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{t.title}</div>
-                        {t.project && (
-                          <div className="text-xs text-muted-foreground">{t.project}</div>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        {t.aiSec > 0 && (
-                          <Badge className="bg-primary/10 text-primary">IA</Badge>
-                        )}
-                        <span className="font-medium">{formatDuration(t.sec)}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Horas por tarea</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y divide-border text-sm">
+                {tasksSorted.map((t, i) => (
+                  <li key={i} className="flex items-center justify-between gap-3 py-2">
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{t.title}</div>
+                      {t.project && (
+                        <div className="text-xs text-muted-foreground">{t.project}</div>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {t.aiSec > 0 && (
+                        <Badge className="bg-primary/10 text-primary">IA</Badge>
+                      )}
+                      <span className="font-medium">{formatDuration(t.sec)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

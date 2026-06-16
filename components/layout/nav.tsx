@@ -29,7 +29,7 @@ export const NAV: NavItem[] = [
   { href: "/tareas", label: "Tareas", icon: CheckSquare },
   { href: "/proyectos", label: "Proyectos", icon: FolderKanban },
   { href: "/calendario", label: "Calendario", icon: Calendar },
-  { href: "/tiempo", label: "Tiempo", icon: Timer },
+  { href: "/tiempo", label: "Tiempo", icon: Timer, adminOnly: true },
   { href: "/oficina", label: "Oficina", icon: Building2 },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users, adminOnly: true },
   { href: "/admin/ajustes", label: "Ajustes", icon: Settings, adminOnly: true },

@@ -55,6 +55,7 @@ model User {
   role         Role     @default(MARKETING)
   team         Team?
   avatarUrl    String?
+  avatarSeed   String?
   active       Boolean  @default(true)
   lastSeenAt   DateTime?
   createdAt    DateTime @default(now())
@@ -67,6 +68,7 @@ model User {
   attachments     Attachment[]
   activities      Activity[]
   timeEntries     TimeEntry[]
+  workSessions    WorkSession[]
 
   @@index([role])
   @@index([team])
@@ -199,4 +201,17 @@ model TimeEntry {
   @@index([userId])
   @@index([taskId])
   @@index([endedAt])
+}
+
+model WorkSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  endedAt    DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([startedAt])
 }
