@@ -8,7 +8,7 @@ import { ALL_TEAMS, canAccessTeam, defaultTeamFor } from "@/lib/rbac";
 import { logActivity } from "@/lib/activity";
 import { STATUS_ORDER } from "@/lib/tasks";
 import { upsertTaskEvent, deleteTaskEvent } from "@/lib/calendar";
-import { sendEmail, emailLayout, appUrl } from "@/lib/email";
+import { sendEmail, emailLayout, appUrl, escapeHtml } from "@/lib/email";
 import type { Team, TaskStatus, Priority } from "@/generated/prisma/enums";
 
 type FormState = { error?: string; ok?: string };
@@ -102,7 +102,7 @@ export async function createTask(
           subject: `Nueva tarea: ${title}`,
           html: emailLayout(
             "Te han asignado una tarea",
-            `<strong>${user.name ?? "Alguien"}</strong> te ha asignado la tarea «${title}».`,
+            `<strong>${escapeHtml(user.name ?? "Alguien")}</strong> te ha asignado la tarea «${escapeHtml(title)}».`,
             appUrl(`/tareas/${task.id}`),
           ),
         });
@@ -221,7 +221,7 @@ export async function updateTask(formData: FormData) {
           subject: `Tarea asignada: ${title}`,
           html: emailLayout(
             "Te han asignado una tarea",
-            `<strong>${user.name ?? "Alguien"}</strong> te asignó la tarea «${title}».`,
+            `<strong>${escapeHtml(user.name ?? "Alguien")}</strong> te asignó la tarea «${escapeHtml(title)}».`,
             appUrl(`/tareas/${id}`),
           ),
         });
@@ -261,7 +261,7 @@ export async function addComment(formData: FormData) {
           subject: `Nuevo comentario: ${task.title}`,
           html: emailLayout(
             "Nuevo comentario en una tarea",
-            `<strong>${user.name ?? "Alguien"}</strong> comentó en «${task.title}»:<br><br>${body.slice(0, 200)}`,
+            `<strong>${escapeHtml(user.name ?? "Alguien")}</strong> comentó en «${escapeHtml(task.title)}»:<br><br>${escapeHtml(body.slice(0, 200))}`,
             appUrl(`/tareas/${taskId}`),
           ),
         });

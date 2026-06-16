@@ -20,9 +20,9 @@ export async function createUser(
   const password = String(formData.get("password") ?? "");
   const role = String(formData.get("role") ?? "") as Role;
 
-  if (!name || !email.includes("@") || password.length < 6 || !ALL_ROLES.includes(role)) {
+  if (!name || !email.includes("@") || password.length < 8 || !ALL_ROLES.includes(role)) {
     return {
-      error: "Revisa los campos: email válido y contraseña de mínimo 6 caracteres.",
+      error: "Revisa los campos: email válido y contraseña de mínimo 8 caracteres.",
     };
   }
 
@@ -90,8 +90,8 @@ export async function editUser(
     email,
   };
   if (newPassword) {
-    if (newPassword.length < 6)
-      return { error: "La nueva contraseña debe tener al menos 6 caracteres." };
+    if (newPassword.length < 8)
+      return { error: "La nueva contraseña debe tener al menos 8 caracteres." };
     data.passwordHash = await bcrypt.hash(newPassword, 10);
   }
 

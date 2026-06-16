@@ -23,6 +23,16 @@ function getTransporter() {
   return transporter;
 }
 
+/** Escapa texto de usuario antes de meterlo en el HTML de un email. */
+export function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function appUrl(path = ""): string {
   const base = (process.env.AUTH_URL || "http://localhost:3001").replace(
     /\/$/,

@@ -14,8 +14,8 @@ export async function changeOwnPassword(
   const current = String(formData.get("current") ?? "");
   const next = String(formData.get("next") ?? "");
 
-  if (next.length < 6)
-    return { error: "La nueva contraseña debe tener al menos 6 caracteres." };
+  if (next.length < 8)
+    return { error: "La nueva contraseña debe tener al menos 8 caracteres." };
 
   const user = await prisma.user.findUnique({ where: { id: sessionUser.id } });
   if (!user) return { error: "Usuario no encontrado." };
