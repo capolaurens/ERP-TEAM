@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { PresenceHeartbeat } from "@/components/presence-heartbeat";
 
 export default async function AppLayout({
   children,
@@ -19,6 +20,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen">
+      <PresenceHeartbeat />
       <Sidebar role={session.user.role} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
