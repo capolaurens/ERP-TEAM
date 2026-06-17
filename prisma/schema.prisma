@@ -45,6 +45,13 @@ enum ActivityType {
   COMMENTED
   FILE_UPLOADED
   DUE_CHANGED
+  PHASE_CHANGED
+}
+
+enum ModelPhase {
+  MESH
+  TEXTURE
+  DONE
 }
 
 model User {
@@ -113,16 +120,28 @@ model Task {
   updatedAt   DateTime   @updatedAt
   googleEventId String?
 
+  // Pipeline de validación 3D (malla -> textura -> completada)
+  phase               ModelPhase @default(MESH)
+  changesRequested    Boolean    @default(false)
+  meshApprovedAt      DateTime?
+  meshApprovedById    String?
+  textureApprovedAt   DateTime?
+  textureApprovedById String?
+  clientApprovedAt    DateTime?
+  clientApprovedById  String?
+
   comments    Comment[]
   attachments Attachment[]
   activities  Activity[]
   timeEntries TimeEntry[]
+  modelImages ModelImage[]
 
   @@index([team])
   @@index([status])
   @@index([assigneeId])
   @@index([projectId])
   @@index([dueDate])
+  @@index([phase])
 }
 
 model Comment {
@@ -195,12 +214,28 @@ model TimeEntry {
   endedAt     DateTime?
   durationSec Int       @default(0)
   withAI      Boolean   @default(false)
+  phase       ModelPhase?
   note        String?
   createdAt   DateTime  @default(now())
 
   @@index([userId])
   @@index([taskId])
   @@index([endedAt])
+}
+
+model ModelImage {
+  id           String     @id @default(cuid())
+  taskId       String
+  task         Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  phase        ModelPhase @default(MESH)
+  kind         String     @default("progress") // progress | reference
+  data         Bytes
+  mimeType     String
+  fileName     String
+  uploadedById String?
+  createdAt    DateTime   @default(now())
+
+  @@index([taskId])
 }
 
 model WorkSession {

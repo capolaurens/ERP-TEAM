@@ -5,6 +5,8 @@ import {
   STATUS_LABELS,
   PRIORITY_BADGE,
   PRIORITY_LABELS,
+  PHASE_BADGE,
+  PHASE_LABELS,
 } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import type { TaskCardData } from "./task-card";
@@ -47,9 +49,16 @@ export function TaskTable({ tasks }: { tasks: TaskCardData[] }) {
                   </Link>
                 </td>
                 <td className="px-4 py-3">
-                  <Badge className={STATUS_BADGE[t.status]}>
-                    {STATUS_LABELS[t.status]}
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge className={STATUS_BADGE[t.status]}>
+                      {STATUS_LABELS[t.status]}
+                    </Badge>
+                    {t.team === "DESIGN" && t.status !== "DONE" && (
+                      <Badge className={PHASE_BADGE[t.phase]}>
+                        {PHASE_LABELS[t.phase]}
+                      </Badge>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <Badge className={PRIORITY_BADGE[t.priority]}>

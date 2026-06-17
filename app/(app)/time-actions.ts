@@ -4,60 +4,21 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 import { canAccessTeam } from "@/lib/rbac";
+import type { ModelPhase } from "@/generated/prisma/enums";
 
-/** Cierra el cronómetro activo del usuario (si lo hay) calculando su duración. */
-async function stopRunningFor(userId: string) {
-  const running = await prisma.timeEntry.findFirst({
-    where: { userId, endedAt: null },
-    orderBy: { startedAt: "desc" },
-  });
-  if (!running) return null;
-  const now = new Date();
-  const durationSec = Math.max(
-    0,
-    Math.floor((now.getTime() - running.startedAt.getTime()) / 1000),
-  );
-  await prisma.timeEntry.update({
-    where: { id: running.id },
-    data: { endedAt: now, durationSec },
-  });
-  return running;
-}
-
-export async function startTimer(formData: FormData) {
-  const user = await requireAuth();
-  const taskId = String(formData.get("taskId") ?? "");
-  const withAI = String(formData.get("withAI") ?? "") === "true";
-  const task = await prisma.task.findUnique({ where: { id: taskId } });
-  if (!task || !canAccessTeam(user, task.team)) return;
-
-  await stopRunningFor(user.id); // solo un cronómetro a la vez
-  await prisma.timeEntry.create({
-    data: { taskId, userId: user.id, withAI, startedAt: new Date() },
-  });
-
-  revalidatePath(`/tareas/${taskId}`);
-  revalidatePath("/tiempo");
-  revalidatePath("/", "layout");
-}
-
-export async function stopTimer() {
-  const user = await requireAuth();
-  const running = await stopRunningFor(user.id);
-  if (running?.taskId) revalidatePath(`/tareas/${running.taskId}`);
-  revalidatePath("/tiempo");
-  revalidatePath("/", "layout");
-}
-
+/** Registro de tiempo MANUAL: el usuario indica cuánto tardó en la pieza. */
 export async function addManualEntry(formData: FormData) {
   const user = await requireAuth();
   const taskId = String(formData.get("taskId") ?? "");
   const withAI = String(formData.get("withAI") ?? "") === "true";
   const note = String(formData.get("note") ?? "").trim() || null;
-  const minutes = Math.max(
-    1,
-    Math.min(24 * 60, parseInt(String(formData.get("minutes") ?? "0"), 10) || 0),
-  );
+  const phaseRaw = String(formData.get("phase") ?? "");
+  const phase: ModelPhase | null =
+    phaseRaw === "MESH" || phaseRaw === "TEXTURE" ? phaseRaw : null;
+  const hours = Math.max(0, parseInt(String(formData.get("hours") ?? "0"), 10) || 0);
+  const mins = Math.max(0, parseInt(String(formData.get("minutes") ?? "0"), 10) || 0);
+  const minutes = Math.max(1, Math.min(24 * 60, hours * 60 + mins));
+
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task || !canAccessTeam(user, task.team)) return;
 
@@ -68,6 +29,7 @@ export async function addManualEntry(formData: FormData) {
       taskId,
       userId: user.id,
       withAI,
+      phase,
       startedAt,
       endedAt: now,
       durationSec: minutes * 60,

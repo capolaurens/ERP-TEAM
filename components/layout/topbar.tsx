@@ -4,23 +4,19 @@ import { logout } from "@/app/(auth)/login/actions";
 import { ROLE_LABELS } from "@/lib/rbac";
 import type { Role } from "@/generated/prisma/enums";
 import { MobileNav } from "./mobile-nav";
-import { TopbarTimer } from "./topbar-timer";
 
 export function Topbar({
   name,
   email,
   role,
-  running,
 }: {
   name: string;
   email: string;
   role: Role;
-  running: { startedAt: string; taskTitle: string; taskId: string } | null;
 }) {
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 sm:px-6">
       <MobileNav role={role} />
-      <TopbarTimer running={running} />
       <div className="ml-auto flex items-center gap-3 sm:gap-4">
         <Link
           href="/perfil"

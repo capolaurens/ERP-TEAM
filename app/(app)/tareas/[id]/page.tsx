@@ -4,7 +4,7 @@ import { ArrowLeft, FileText, Trash2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 import { canAccessTeam, TEAM_LABELS } from "@/lib/rbac";
-import { STATUS_LABELS } from "@/lib/tasks";
+import { STATUS_LABELS, PHASE_LABELS, PHASE_BADGE } from "@/lib/tasks";
 import { formatRelative, toDateInput, formatBytes } from "@/lib/format";
 import { isDriveConfigured } from "@/lib/drive";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,8 @@ import { CommentForm } from "./comment-form";
 import { DeleteTaskButton } from "./delete-task-button";
 import { AttachmentUploader } from "./attachment-uploader";
 import { deleteAttachment } from "./attachment-actions";
-import { TimeTracker } from "./time-tracker";
+import { ManualTime } from "./manual-time";
+import { ModelPipeline } from "./model-pipeline";
 
 function activityText(type: ActivityType, meta: unknown): string {
   const m = (meta ?? {}) as Record<string, unknown>;
@@ -32,6 +33,13 @@ function activityText(type: ActivityType, meta: unknown): string {
       return "comentó";
     case "FILE_UPLOADED":
       return "subió un archivo";
+    case "PHASE_CHANGED": {
+      if (m.client) return "marcó el visto bueno del cliente";
+      if (m.revert) return "deshizo una validación";
+      if (m.approved === "MESH") return "validó la malla ✓";
+      if (m.approved === "TEXTURE") return "validó la textura ✓";
+      return "cambió la fase";
+    }
     default:
       return "actualizó la tarea";
   }
@@ -62,13 +70,13 @@ export default async function TaskDetailPage({
         include: { user: true },
         orderBy: { startedAt: "desc" },
       },
+      modelImages: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!task || !canAccessTeam(user, task.team)) notFound();
 
-  const running = await prisma.timeEntry.findFirst({
-    where: { userId: user.id, endedAt: null },
-  });
+  const isAdmin = user.role === "ADMIN";
+  const isDesign = task.team === "DESIGN";
   const completedTime = task.timeEntries.filter((e) => e.endedAt);
   const totalSec = completedTime.reduce((a, e) => a + e.durationSec, 0);
   const aiSec = completedTime
@@ -79,9 +87,16 @@ export default async function TaskDetailPage({
     userName: e.user?.name ?? "Usuario",
     durationSec: e.durationSec,
     withAI: e.withAI,
+    phase: e.phase,
     note: e.note,
     when: formatRelative(e.createdAt),
-    canDelete: e.userId === user.id || user.role === "ADMIN",
+    canDelete: e.userId === user.id || isAdmin,
+  }));
+  const images = task.modelImages.map((im) => ({
+    id: im.id,
+    phase: im.phase,
+    kind: im.kind,
+    canDelete: im.uploadedById === user.id || isAdmin,
   }));
 
   const driveConfigured = isDriveConfigured();
@@ -114,11 +129,32 @@ export default async function TaskDetailPage({
             <Badge className="bg-primary/10 text-primary">
               {TEAM_LABELS[task.team]}
             </Badge>
+            {isDesign && (
+              <Badge className={PHASE_BADGE[task.phase]}>
+                {PHASE_LABELS[task.phase]}
+              </Badge>
+            )}
+            {task.clientApprovedAt && (
+              <Badge className="bg-green-100 text-green-700">Cliente ✓</Badge>
+            )}
             {task.createdBy && <span>Creada por {task.createdBy.name}</span>}
           </div>
         </div>
         <DeleteTaskButton taskId={task.id} title={task.title} />
       </div>
+
+      {isDesign && (
+        <ModelPipeline
+          taskId={task.id}
+          phase={task.phase}
+          changesRequested={task.changesRequested}
+          meshApprovedAt={task.meshApprovedAt}
+          textureApprovedAt={task.textureApprovedAt}
+          clientApprovedAt={task.clientApprovedAt}
+          images={images}
+          isAdmin={isAdmin}
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -189,20 +225,14 @@ export default async function TaskDetailPage({
               <CardTitle>Control de tiempo</CardTitle>
             </CardHeader>
             <CardContent>
-              <TimeTracker
+              <ManualTime
                 taskId={task.id}
-                running={
-                  running
-                    ? {
-                        taskId: running.taskId ?? "",
-                        startedAt: running.startedAt.toISOString(),
-                      }
-                    : null
-                }
                 entries={timeEntries}
                 totalSec={totalSec}
                 aiSec={aiSec}
                 noAiSec={totalSec - aiSec}
+                showPhase={isDesign}
+                currentPhase={task.phase}
               />
             </CardContent>
           </Card>
