@@ -15,9 +15,18 @@ type RowUser = {
   role: Role;
   team: Team | null;
   active: boolean;
+  projectIds: string[];
 };
 
-export function UserRow({ user, isSelf }: { user: RowUser; isSelf: boolean }) {
+export function UserRow({
+  user,
+  isSelf,
+  projects,
+}: {
+  user: RowUser;
+  isSelf: boolean;
+  projects: { id: string; name: string }[];
+}) {
   const team = user.team ?? roleTeam(user.role);
 
   return (
@@ -70,7 +79,14 @@ export function UserRow({ user, isSelf }: { user: RowUser; isSelf: boolean }) {
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-3">
           <UserEditModal
-            user={{ id: user.id, name: user.name, email: user.email }}
+            user={{
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              projectIds: user.projectIds,
+            }}
+            projects={projects}
           />
           {!isSelf && (
             <form

@@ -11,6 +11,7 @@ export default async function AppLayout({
 }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
+  if (session.user.role === "CLIENT") redirect("/portal");
 
   return (
     <div className="flex min-h-screen">

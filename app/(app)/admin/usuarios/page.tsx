@@ -6,9 +6,13 @@ import { UserRow } from "./user-row";
 
 export default async function UsuariosPage() {
   const me = await requireAdmin();
-  const users = await prisma.user.findMany({
-    orderBy: [{ active: "desc" }, { name: "asc" }],
-  });
+  const [users, projects] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+      include: { clientProjects: { select: { id: true } } },
+    }),
+    prisma.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -20,7 +24,7 @@ export default async function UsuariosPage() {
         </p>
       </div>
 
-      <UserCreateForm />
+      <UserCreateForm projects={projects} />
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
@@ -40,6 +44,7 @@ export default async function UsuariosPage() {
                 <UserRow
                   key={u.id}
                   isSelf={u.id === me.id}
+                  projects={projects}
                   user={{
                     id: u.id,
                     name: u.name,
@@ -47,6 +52,7 @@ export default async function UsuariosPage() {
                     role: u.role,
                     team: u.team,
                     active: u.active,
+                    projectIds: u.clientProjects.map((c) => c.id),
                   }}
                 />
               ))}

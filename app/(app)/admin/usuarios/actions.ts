@@ -19,6 +19,7 @@ export async function createUser(
   const email = String(formData.get("email") ?? "").toLowerCase().trim();
   const password = String(formData.get("password") ?? "");
   const role = String(formData.get("role") ?? "") as Role;
+  const projectIds = formData.getAll("projectIds").map(String).filter(Boolean);
 
   if (!name || !email.includes("@") || password.length < 8 || !ALL_ROLES.includes(role)) {
     return {
@@ -31,7 +32,16 @@ export async function createUser(
 
   const passwordHash = await bcrypt.hash(password, 10);
   await prisma.user.create({
-    data: { name, email, passwordHash, role, team: roleTeam(role) },
+    data: {
+      name,
+      email,
+      passwordHash,
+      role,
+      team: roleTeam(role),
+      ...(role === "CLIENT" && projectIds.length
+        ? { clientProjects: { connect: projectIds.map((pid) => ({ id: pid })) } }
+        : {}),
+    },
   });
 
   revalidatePath("/admin/usuarios");
@@ -76,6 +86,7 @@ export async function editUser(
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").toLowerCase().trim();
   const newPassword = String(formData.get("newPassword") ?? "");
+  const projectIds = formData.getAll("projectIds").map(String).filter(Boolean);
 
   if (!id) return { error: "Usuario no válido." };
   if (!name || !email.includes("@"))
@@ -96,6 +107,15 @@ export async function editUser(
   }
 
   await prisma.user.update({ where: { id }, data });
+
+  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  if (target?.role === "CLIENT") {
+    await prisma.user.update({
+      where: { id },
+      data: { clientProjects: { set: projectIds.map((pid) => ({ id: pid })) } },
+    });
+  }
+
   revalidatePath("/admin/usuarios");
   return {
     ok: newPassword

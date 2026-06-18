@@ -5,6 +5,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   MARKETING: "Marketing",
   SALES: "Ventas",
   DESIGN: "Diseño / 3D",
+  CLIENT: "Cliente",
 };
 
 export const TEAM_LABELS: Record<Team, string> = {
@@ -14,7 +15,7 @@ export const TEAM_LABELS: Record<Team, string> = {
 };
 
 export const ALL_TEAMS: Team[] = ["MARKETING", "SALES", "DESIGN"];
-export const ALL_ROLES: Role[] = ["ADMIN", "MARKETING", "SALES", "DESIGN"];
+export const ALL_ROLES: Role[] = ["ADMIN", "MARKETING", "SALES", "DESIGN", "CLIENT"];
 
 /** Equipo "natural" asociado a un rol (Admin no pertenece a un equipo fijo). */
 export function roleTeam(role: Role): Team | null {

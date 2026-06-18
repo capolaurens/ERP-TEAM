@@ -15,12 +15,20 @@ export async function GET(
 
   const img = await prisma.modelImage.findUnique({
     where: { id },
-    include: { task: { select: { team: true } } },
+    include: {
+      task: {
+        select: {
+          team: true,
+          project: { select: { clientUsers: { select: { id: true } } } },
+        },
+      },
+    },
   });
   if (!img) return new NextResponse("No encontrado", { status: 404 });
-  if (!canAccessTeam(session.user, img.task.team)) {
-    return new NextResponse("Sin acceso", { status: 403 });
-  }
+  const u = session.user;
+  const clientLinked = img.task.project?.clientUsers.some((c) => c.id === u.id) ?? false;
+  const allowed = canAccessTeam(u, img.task.team) || (u.role === "CLIENT" && clientLinked);
+  if (!allowed) return new NextResponse("Sin acceso", { status: 403 });
 
   const body = new Uint8Array(img.data);
   return new NextResponse(body, {
