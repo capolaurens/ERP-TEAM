@@ -139,29 +139,44 @@ export default async function TaskDetailPage({
         />
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Detalles</CardTitle>
+              <CardTitle>Detalles del producto</CardTitle>
             </CardHeader>
-            <CardContent>
-              <TaskEditForm
-                task={{
-                  id: task.id,
-                  title: task.title,
-                  description: task.description ?? "",
-                  status: task.status,
-                  priority: task.priority,
-                  assigneeId: task.assigneeId ?? "",
-                  projectId: task.projectId ?? "",
-                  dueInput: toDateInput(task.dueDate),
-                  referenceUrl: task.referenceUrl ?? "",
-                }}
-                projects={projects.map((p) => ({ id: p.id, name: p.name }))}
-                members={members.map((m) => ({ id: m.id, name: m.name }))}
-                thursdays={thursdays}
-              />
+            <CardContent className="space-y-3">
+              {task.description && (
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                  {task.description}
+                </p>
+              )}
+              <details className="group rounded-lg border border-border">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-medium hover:bg-muted/50">
+                  <span>✎ Editar tarea</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    estado · prioridad · responsable · entrega
+                  </span>
+                </summary>
+                <div className="border-t border-border p-3">
+                  <TaskEditForm
+                    task={{
+                      id: task.id,
+                      title: task.title,
+                      description: task.description ?? "",
+                      status: task.status,
+                      priority: task.priority,
+                      assigneeId: task.assigneeId ?? "",
+                      projectId: task.projectId ?? "",
+                      dueInput: toDateInput(task.dueDate),
+                      referenceUrl: task.referenceUrl ?? "",
+                    }}
+                    projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+                    members={members.map((m) => ({ id: m.id, name: m.name }))}
+                    thursdays={thursdays}
+                  />
+                </div>
+              </details>
             </CardContent>
           </Card>
 
@@ -204,7 +219,7 @@ export default async function TaskDetailPage({
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Actividad</CardTitle>

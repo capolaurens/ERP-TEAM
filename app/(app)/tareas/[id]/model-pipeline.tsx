@@ -33,9 +33,27 @@ export function ModelPipeline({
   const refs = images.filter((i) => i.kind === "reference");
   const progress = images.filter((i) => i.kind !== "reference");
 
+  const banner = changesRequested
+    ? { cls: "border-amber-300 bg-amber-50 text-amber-900", text: "⚠ Cambios pedidos: lee el comentario, corrige y sube un avance nuevo." }
+    : phase === "MESH"
+      ? { cls: "border-indigo-300 bg-indigo-50 text-indigo-900", text: "Paso 1 · MALLA — modela la pieza y sube tus avances. Cuando esté lista, Lorenzo la valida y pasa a Textura." }
+      : phase === "TEXTURE"
+        ? { cls: "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-900", text: "Paso 2 · TEXTURA — aplica la textura y sube avances. Al validarla, la pieza queda terminada." }
+        : {
+            cls: "border-green-300 bg-green-50 text-green-900",
+            text: clientApprovedAt
+              ? "✓ Pieza terminada y validada por el cliente."
+              : "✓ Pieza terminada. Falta el visto bueno del cliente.",
+          };
+
   return (
     <Card>
       <CardContent className="space-y-3 py-4">
+        {/* Qué toca hacer ahora */}
+        <div className={cn("rounded-lg border px-3 py-2 text-sm font-semibold", banner.cls)}>
+          {banner.text}
+        </div>
+
         {/* Casillas de validación */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-1 flex items-center gap-1.5 text-sm font-medium">
