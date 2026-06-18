@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 export function ModelImageUploader({
   taskId,
   phase,
+  only,
 }: {
   taskId: string;
   phase: string;
+  only?: "reference" | "progress";
 }) {
   const progInput = useRef<HTMLInputElement>(null);
   const refInput = useRef<HTMLInputElement>(null);
@@ -68,23 +70,28 @@ export function ModelImageUploader({
         }}
       />
       <div className="flex flex-wrap gap-2">
-        <Button
-          variant="default"
-          size="sm"
-          disabled={busy}
-          onClick={() => progInput.current?.click()}
-        >
-          {busy ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
-          Subir avance
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => refInput.current?.click()}
-        >
-          <ImagePlus className="size-4" /> Subir referencia
-        </Button>
+        {only !== "reference" && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() => progInput.current?.click()}
+          >
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
+            Subir avance
+          </Button>
+        )}
+        {only !== "progress" && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() => refInput.current?.click()}
+          >
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
+            Subir referencia
+          </Button>
+        )}
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>

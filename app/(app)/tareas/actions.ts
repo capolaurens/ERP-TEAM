@@ -33,6 +33,7 @@ export async function createTask(
   const dueDate = parseDue(String(formData.get("dueDate") ?? ""));
   const projectId = String(formData.get("projectId") ?? "").trim() || null;
   const assigneeId = String(formData.get("assigneeId") ?? "").trim() || null;
+  const referenceUrl = String(formData.get("referenceUrl") ?? "").trim() || null;
   let team = String(formData.get("team") ?? "") as Team;
 
   if (user.role !== "ADMIN") {
@@ -62,6 +63,7 @@ export async function createTask(
       team,
       projectId,
       assigneeId,
+      referenceUrl,
       status: "TODO",
       order,
       createdById: user.id,
@@ -152,6 +154,7 @@ export async function updateTask(formData: FormData) {
   const dueDate = parseDue(String(formData.get("dueDate") ?? ""));
   const assigneeId = String(formData.get("assigneeId") ?? "").trim() || null;
   const projectId = String(formData.get("projectId") ?? "").trim() || null;
+  const referenceUrl = String(formData.get("referenceUrl") ?? "").trim() || null;
 
   const status = STATUS_ORDER.includes(statusRaw) ? statusRaw : task.status;
   const priority = PRIORITIES.includes(priorityRaw) ? priorityRaw : task.priority;
@@ -190,7 +193,7 @@ export async function updateTask(formData: FormData) {
 
   await prisma.task.update({
     where: { id },
-    data: { title, description, status, priority, dueDate, assigneeId, projectId },
+    data: { title, description, status, priority, dueDate, assigneeId, projectId, referenceUrl },
   });
 
   try {

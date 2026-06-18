@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Trash2, ExternalLink } from "lucide-react";
 import { toggleArchiveProject, deleteProject } from "./actions";
 import { Badge } from "@/components/ui/badge";
 import { TEAM_LABELS } from "@/lib/rbac";
@@ -17,6 +17,8 @@ export function ProjectCard({
     team: Team;
     status: string;
     taskCount: number;
+    websiteUrl: string | null;
+    logoUrl: string | null;
   };
 }) {
   const archived = project.status === "archived";
@@ -32,19 +34,41 @@ export function ProjectCard({
         )}
       </div>
       <Link href={`/proyectos/${project.id}`} className="block flex-1">
-        <h3 className="text-lg font-semibold transition group-hover:text-primary">
-          {project.name}
-        </h3>
+        <div className="flex items-center gap-3">
+          {project.logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={project.logoUrl}
+              alt={project.name}
+              className="size-11 shrink-0 rounded-lg border border-border bg-white object-contain p-1"
+            />
+          )}
+          <h3 className="text-lg font-semibold leading-tight transition group-hover:text-primary">
+            {project.name}
+          </h3>
+        </div>
         {project.description && (
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
             {project.description}
           </p>
         )}
       </Link>
-      <div className="mt-4 flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
-          {project.taskCount} tarea{project.taskCount === 1 ? "" : "s"}
-        </span>
+      <div className="mt-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <span>
+            {project.taskCount} tarea{project.taskCount === 1 ? "" : "s"}
+          </span>
+          {project.websiteUrl && (
+            <a
+              href={project.websiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-primary hover:underline"
+            >
+              <ExternalLink className="size-3.5" /> web
+            </a>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           <form action={toggleArchiveProject}>
             <input type="hidden" name="id" value={project.id} />

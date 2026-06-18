@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/session";
 import { canAccessTeam, TEAM_LABELS } from "@/lib/rbac";
 import { STATUS_LABELS, PHASE_LABELS, PHASE_BADGE } from "@/lib/tasks";
 import { formatRelative, toDateInput, formatBytes } from "@/lib/format";
+import { nextThursdays } from "@/lib/dates";
 import { isDriveConfigured } from "@/lib/drive";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,6 @@ import { CommentForm } from "./comment-form";
 import { DeleteTaskButton } from "./delete-task-button";
 import { AttachmentUploader } from "./attachment-uploader";
 import { deleteAttachment } from "./attachment-actions";
-import { ManualTime } from "./manual-time";
 import { ModelPipeline } from "./model-pipeline";
 
 function activityText(type: ActivityType, meta: unknown): string {
@@ -34,11 +34,11 @@ function activityText(type: ActivityType, meta: unknown): string {
     case "FILE_UPLOADED":
       return "subió un archivo";
     case "PHASE_CHANGED": {
-      if (m.client) return "marcó el visto bueno del cliente";
-      if (m.revert) return "deshizo una validación";
-      if (m.approved === "MESH") return "validó la malla ✓";
-      if (m.approved === "TEXTURE") return "validó la textura ✓";
-      return "cambió la fase";
+      const on = m.to === "on";
+      if (m.toggle === "mesh") return on ? "validó la malla ✓" : "quitó la validación de la malla";
+      if (m.toggle === "texture") return on ? "validó la textura ✓" : "quitó la validación de la textura";
+      if (m.toggle === "client") return on ? "marcó el OK del cliente ✓" : "quitó el OK del cliente";
+      return "actualizó la validación";
     }
     default:
       return "actualizó la tarea";
@@ -66,10 +66,6 @@ export default async function TaskDetailPage({
         orderBy: { createdAt: "desc" },
         take: 40,
       },
-      timeEntries: {
-        include: { user: true },
-        orderBy: { startedAt: "desc" },
-      },
       modelImages: { orderBy: { createdAt: "desc" } },
     },
   });
@@ -77,21 +73,7 @@ export default async function TaskDetailPage({
 
   const isAdmin = user.role === "ADMIN";
   const isDesign = task.team === "DESIGN";
-  const completedTime = task.timeEntries.filter((e) => e.endedAt);
-  const totalSec = completedTime.reduce((a, e) => a + e.durationSec, 0);
-  const aiSec = completedTime
-    .filter((e) => e.withAI)
-    .reduce((a, e) => a + e.durationSec, 0);
-  const timeEntries = completedTime.map((e) => ({
-    id: e.id,
-    userName: e.user?.name ?? "Usuario",
-    durationSec: e.durationSec,
-    withAI: e.withAI,
-    phase: e.phase,
-    note: e.note,
-    when: formatRelative(e.createdAt),
-    canDelete: e.userId === user.id || isAdmin,
-  }));
+  const thursdays = nextThursdays(12);
   const images = task.modelImages.map((im) => ({
     id: im.id,
     phase: im.phase,
@@ -151,6 +133,7 @@ export default async function TaskDetailPage({
           meshApprovedAt={task.meshApprovedAt}
           textureApprovedAt={task.textureApprovedAt}
           clientApprovedAt={task.clientApprovedAt}
+          referenceUrl={task.referenceUrl}
           images={images}
           isAdmin={isAdmin}
         />
@@ -173,9 +156,11 @@ export default async function TaskDetailPage({
                   assigneeId: task.assigneeId ?? "",
                   projectId: task.projectId ?? "",
                   dueInput: toDateInput(task.dueDate),
+                  referenceUrl: task.referenceUrl ?? "",
                 }}
                 projects={projects.map((p) => ({ id: p.id, name: p.name }))}
                 members={members.map((m) => ({ id: m.id, name: m.name }))}
+                thursdays={thursdays}
               />
             </CardContent>
           </Card>
@@ -220,23 +205,6 @@ export default async function TaskDetailPage({
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Control de tiempo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ManualTime
-                taskId={task.id}
-                entries={timeEntries}
-                totalSec={totalSec}
-                aiSec={aiSec}
-                noAiSec={totalSec - aiSec}
-                showPhase={isDesign}
-                currentPhase={task.phase}
-              />
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Actividad</CardTitle>

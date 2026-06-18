@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ALL_TEAMS, TEAM_LABELS } from "@/lib/rbac";
 import { PRIORITY_ORDER, PRIORITY_LABELS } from "@/lib/tasks";
+import { nextThursdays } from "@/lib/dates";
 import type { Role, Team } from "@/generated/prisma/enums";
 
 type Opt = { id: string; name: string; team: Team };
@@ -36,11 +37,16 @@ export function TaskCreateModal({
   const initialTeam = fixedTeam ?? userTeam ?? "MARKETING";
   const [open, setOpen] = useState(false);
   const [team, setTeam] = useState<Team>(initialTeam);
+  const [thursdays, setThursdays] = useState<{ value: string; label: string }[]>([]);
   const [state, action, pending] = useActionState(createTask, {} as {
     error?: string;
     ok?: string;
   });
   const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    setThursdays(nextThursdays(12));
+  }, []);
 
   useEffect(() => {
     if (state?.ok) {
@@ -108,8 +114,15 @@ export function TaskCreateModal({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="t-due">Fecha límite</Label>
-              <Input id="t-due" name="dueDate" type="date" />
+              <Label htmlFor="t-due">Entrega (jueves)</Label>
+              <Select id="t-due" name="dueDate" defaultValue="">
+                <option value="">Sin fecha</option>
+                {thursdays.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
             </div>
           </div>
 

@@ -46,6 +46,8 @@ export default async function ProyectosPage() {
                 team: p.team,
                 status: p.status,
                 taskCount: p._count.tasks,
+                websiteUrl: p.websiteUrl,
+                logoUrl: p.logoUrl,
               }}
             />
           ))}

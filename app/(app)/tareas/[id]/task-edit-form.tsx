@@ -15,11 +15,13 @@ import {
 import type { Priority, TaskStatus } from "@/generated/prisma/enums";
 
 type Opt = { id: string; name: string };
+type DayOpt = { value: string; label: string };
 
 export function TaskEditForm({
   task,
   projects,
   members,
+  thursdays,
 }: {
   task: {
     id: string;
@@ -30,10 +32,17 @@ export function TaskEditForm({
     assigneeId: string;
     projectId: string;
     dueInput: string;
+    referenceUrl: string;
   };
   projects: Opt[];
   members: Opt[];
+  thursdays: DayOpt[];
 }) {
+  const dueOpts = [...thursdays];
+  if (task.dueInput && !dueOpts.some((o) => o.value === task.dueInput)) {
+    dueOpts.unshift({ value: task.dueInput, label: `${task.dueInput} (actual)` });
+  }
+
   return (
     <form action={updateTask} className="space-y-4">
       <input type="hidden" name="id" value={task.id} />
@@ -47,8 +56,18 @@ export function TaskEditForm({
           id="e-desc"
           name="description"
           defaultValue={task.description}
-          className="min-h-32"
-          placeholder="Añade detalles, enlaces, checklist…"
+          className="min-h-24"
+          placeholder="Detalles del producto…"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="e-ref">Link de referencia (web del producto)</Label>
+        <Input
+          id="e-ref"
+          name="referenceUrl"
+          type="url"
+          defaultValue={task.referenceUrl}
+          placeholder="https://…"
         />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -84,8 +103,15 @@ export function TaskEditForm({
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="e-due">Fecha límite</Label>
-          <Input id="e-due" type="date" name="dueDate" defaultValue={task.dueInput} />
+          <Label htmlFor="e-due">Entrega (jueves)</Label>
+          <Select id="e-due" name="dueDate" defaultValue={task.dueInput}>
+            <option value="">Sin fecha</option>
+            {dueOpts.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
         </div>
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="e-project">Proyecto</Label>

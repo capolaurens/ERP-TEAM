@@ -47,6 +47,16 @@ export function ProjectCreateForm({
             <Label htmlFor="p-desc">Descripción (opcional)</Label>
             <Textarea id="p-desc" name="description" placeholder="¿De qué trata este proyecto?" />
           </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="p-web">Web de la empresa</Label>
+              <Input id="p-web" name="websiteUrl" type="url" placeholder="https://…" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="p-logo">Logo / foto (URL)</Label>
+              <Input id="p-logo" name="logoUrl" type="url" placeholder="https://…/logo.png" />
+            </div>
+          </div>
           {role === "ADMIN" && (
             <div className="space-y-1.5">
               <Label htmlFor="p-team">Equipo</Label>

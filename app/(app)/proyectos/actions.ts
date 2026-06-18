@@ -17,6 +17,8 @@ export async function createProject(
 
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
+  const websiteUrl = String(formData.get("websiteUrl") ?? "").trim() || null;
+  const logoUrl = String(formData.get("logoUrl") ?? "").trim() || null;
   let team = String(formData.get("team") ?? "") as Team;
 
   if (user.role !== "ADMIN") {
@@ -31,7 +33,7 @@ export async function createProject(
     return { error: "No puedes crear proyectos en ese equipo." };
 
   const project = await prisma.project.create({
-    data: { name, description, team, createdById: user.id },
+    data: { name, description, team, websiteUrl, logoUrl, createdById: user.id },
   });
   await logActivity({
     type: "CREATED",
@@ -42,6 +44,30 @@ export async function createProject(
 
   revalidatePath("/proyectos");
   return { ok: `Proyecto «${name}» creado.` };
+}
+
+export async function updateProject(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireAuth();
+  const id = String(formData.get("id") ?? "");
+  const project = await prisma.project.findUnique({ where: { id } });
+  if (!project || !canAccessTeam(user, project.team))
+    return { error: "Sin acceso a este proyecto." };
+
+  const name = String(formData.get("name") ?? "").trim() || project.name;
+  const description = String(formData.get("description") ?? "").trim() || null;
+  const websiteUrl = String(formData.get("websiteUrl") ?? "").trim() || null;
+  const logoUrl = String(formData.get("logoUrl") ?? "").trim() || null;
+
+  await prisma.project.update({
+    where: { id },
+    data: { name, description, websiteUrl, logoUrl },
+  });
+  revalidatePath("/proyectos");
+  revalidatePath(`/proyectos/${id}`);
+  return { ok: "Proyecto actualizado." };
 }
 
 export async function toggleArchiveProject(formData: FormData) {
