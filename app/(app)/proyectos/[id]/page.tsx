@@ -97,6 +97,15 @@ export default async function ProjectDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href={`/portal/${project.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Abrir la vista que ve el cliente (en pestaña nueva)"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium transition hover:bg-muted"
+          >
+            <ExternalLink className="size-4" /> Ver como cliente
+          </a>
           <ProjectEditForm
             project={{
               id: project.id,
