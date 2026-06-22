@@ -55,6 +55,18 @@ enum ModelPhase {
   DONE
 }
 
+enum RewardKind {
+  GRADE
+  DAYS
+  OTHER
+}
+
+enum RedemptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -78,6 +90,8 @@ model User {
   timeEntries     TimeEntry[]
   workSessions    WorkSession[]
   clientProjects  Project[]    @relation("ClientProjects")
+  pointsEntries   PointsEntry[]
+  redemptions     Redemption[]
 
   @@index([role])
   @@index([team])
@@ -242,6 +256,50 @@ model ModelImage {
   createdAt    DateTime   @default(now())
 
   @@index([taskId])
+}
+
+model Reward {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  costPoints  Int
+  kind        RewardKind   @default(OTHER)
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  redemptions Redemption[]
+
+  @@index([active])
+}
+
+model PointsEntry {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points       Int // + ganados, - gastados
+  reason       String
+  redemptionId String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Redemption {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewardId    String?
+  reward      Reward?          @relation(fields: [rewardId], references: [id], onDelete: SetNull)
+  rewardTitle String
+  costPoints  Int
+  status      RedemptionStatus @default(PENDING)
+  note        String?
+  createdAt   DateTime         @default(now())
+  decidedAt   DateTime?
+  decidedById String?
+
+  @@index([userId])
+  @@index([status])
 }
 
 model WorkSession {

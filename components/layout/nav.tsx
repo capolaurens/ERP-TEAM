@@ -9,6 +9,7 @@ import {
   Calendar,
   Timer,
   Building2,
+  Gift,
   Users,
   Settings,
   type LucideIcon,
@@ -31,6 +32,7 @@ export const NAV: NavItem[] = [
   { href: "/calendario", label: "Calendario", icon: Calendar },
   { href: "/tiempo", label: "Tiempo", icon: Timer, adminOnly: true },
   { href: "/oficina", label: "Oficina", icon: Building2 },
+  { href: "/recompensas", label: "Recompensas", icon: Gift },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users, adminOnly: true },
   { href: "/admin/ajustes", label: "Ajustes", icon: Settings, adminOnly: true },
 ];
