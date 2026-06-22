@@ -1,10 +1,25 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Check, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink } from "lucide-react";
 import { requireAuth } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { clientToggleApproval } from "../actions";
+
+function CheckCell({ on }: { on: boolean }) {
+  return (
+    <div className="flex justify-center">
+      <span
+        className={cn(
+          "flex size-5 items-center justify-center rounded border",
+          on ? "border-green-500 bg-green-500 text-white" : "border-muted-foreground/40 bg-white",
+        )}
+      >
+        {on && <Check className="size-3.5" strokeWidth={3} />}
+      </span>
+    </div>
+  );
+}
 
 export default async function PortalProjectPage({
   params,
@@ -24,15 +39,15 @@ export default async function PortalProjectPage({
   if (!isAdmin && !linked) notFound();
 
   const pieces = await prisma.task.findMany({
-    where: { projectId, textureApprovedAt: { not: null } },
-    include: { modelImages: { orderBy: { createdAt: "desc" } } },
-    orderBy: [{ clientApprovedAt: "asc" }, { textureApprovedAt: "desc" }],
+    where: { projectId },
+    orderBy: [{ category: "asc" }, { title: "asc" }],
   });
 
-  const pending = pieces.filter((p) => !p.clientApprovedAt).length;
+  const done = pieces.filter((p) => p.textureApprovedAt).length;
+  const validated = pieces.filter((p) => p.clientApprovedAt).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Link
         href="/portal"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground"
@@ -43,82 +58,105 @@ export default async function PortalProjectPage({
       <div>
         <h1 className="text-2xl font-semibold">{project.name}</h1>
         <p className="text-muted-foreground">
-          {pieces.length} pieza{pieces.length === 1 ? "" : "s"} terminada
-          {pieces.length === 1 ? "" : "s"}
-          {pending > 0 ? ` · ${pending} pendiente${pending === 1 ? "" : "s"} de tu visto bueno` : " · todo validado ✓"}
+          {pieces.length} piezas · {done} terminadas · {validated} validadas por ti.
+          Marca la última casilla cuando des tu visto bueno.
         </p>
       </div>
 
       {pieces.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center text-sm text-muted-foreground">
-          Todavía no hay piezas terminadas para revisar. Te avisaremos cuando
-          estén listas.
+          Todavía no hay piezas en este proyecto.
         </div>
       ) : (
-        <div className="space-y-4">
-          {pieces.map((t) => {
-            const ok = !!t.clientApprovedAt;
-            return (
-              <div
-                key={t.id}
-                className={
-                  "rounded-xl border bg-card p-4 shadow-sm " +
-                  (ok ? "border-green-300" : "border-border")
-                }
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-semibold">{t.title}</h3>
-                  {ok ? (
-                    <span className="flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
-                      <Check className="size-3.5" /> Validado por ti
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
-                      Pendiente de tu visto bueno
-                    </span>
-                  )}
-                </div>
-
-                {t.modelImages.length > 0 ? (
-                  <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
-                    {t.modelImages.map((im) => (
-                      <a
-                        key={im.id}
-                        href={`/api/model-image/${im.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="overflow-hidden rounded-lg border border-border"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={`/api/model-image/${im.id}`}
-                          alt="pieza"
-                          className="aspect-square w-full bg-muted object-cover"
-                        />
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    (Sin imágenes adjuntas)
-                  </p>
-                )}
-
-                <form action={clientToggleApproval} className="mt-3">
-                  <input type="hidden" name="taskId" value={t.id} />
-                  {ok ? (
-                    <Button type="submit" variant="outline" size="sm">
-                      Quitar mi validación
-                    </Button>
-                  ) : (
-                    <Button type="submit" size="sm">
-                      <ShieldCheck className="size-4" /> Validar pieza
-                    </Button>
-                  )}
-                </form>
-              </div>
-            );
-          })}
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+          <table className="w-full min-w-[820px] border-collapse text-sm">
+            <thead>
+              <tr className="bg-muted/60 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="border-b border-border px-3 py-2">Listado</th>
+                <th className="border-b border-border px-3 py-2">Link web</th>
+                <th className="border-b border-border px-3 py-2">Categoría</th>
+                <th className="border-b border-border px-3 py-2 text-center">Malla</th>
+                <th className="border-b border-border px-3 py-2 text-center">Textura</th>
+                <th className="border-b border-border px-3 py-2">Link Drive</th>
+                <th className="border-b border-border bg-amber-50 px-3 py-2 text-center">
+                  Tu visto bueno
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {pieces.map((t) => {
+                const clientOk = !!t.clientApprovedAt;
+                const canValidate = !!t.textureApprovedAt;
+                return (
+                  <tr key={t.id} className="hover:bg-muted/30">
+                    <td className="border-b border-border px-3 py-2 font-medium">{t.title}</td>
+                    <td className="border-b border-border px-3 py-2">
+                      {t.referenceUrl ? (
+                        <a
+                          href={t.referenceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-primary hover:underline"
+                        >
+                          <ExternalLink className="size-3.5" /> Ver
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
+                    </td>
+                    <td className="border-b border-border px-3 py-2 text-muted-foreground">
+                      {t.category ?? "—"}
+                    </td>
+                    <td className="border-b border-border px-3 py-2">
+                      <CheckCell on={!!t.meshApprovedAt} />
+                    </td>
+                    <td className="border-b border-border px-3 py-2">
+                      <CheckCell on={!!t.textureApprovedAt} />
+                    </td>
+                    <td className="border-b border-border px-3 py-2">
+                      {t.driveUrl ? (
+                        <a
+                          href={t.driveUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-primary hover:underline"
+                        >
+                          <ExternalLink className="size-3.5" /> Abrir
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
+                    </td>
+                    <td className="border-b border-border bg-amber-50/40 px-3 py-2">
+                      <form action={clientToggleApproval} className="flex justify-center">
+                        <input type="hidden" name="taskId" value={t.id} />
+                        <button
+                          type="submit"
+                          disabled={!canValidate}
+                          title={
+                            !canValidate
+                              ? "Disponible cuando la pieza esté terminada"
+                              : clientOk
+                                ? "Quitar tu visto bueno"
+                                : "Dar tu visto bueno"
+                          }
+                          className={cn(
+                            "flex size-5 items-center justify-center rounded border transition",
+                            clientOk
+                              ? "border-green-600 bg-green-600 text-white"
+                              : "border-muted-foreground/50 bg-white hover:border-green-600",
+                            !canValidate && "cursor-not-allowed opacity-30",
+                          )}
+                        >
+                          {clientOk && <Check className="size-3.5" strokeWidth={3} />}
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

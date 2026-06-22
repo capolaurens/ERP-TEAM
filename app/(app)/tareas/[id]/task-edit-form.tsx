@@ -33,6 +33,8 @@ export function TaskEditForm({
     projectId: string;
     dueInput: string;
     referenceUrl: string;
+    category: string;
+    driveUrl: string;
   };
   projects: Opt[];
   members: Opt[];
@@ -69,6 +71,27 @@ export function TaskEditForm({
           defaultValue={task.referenceUrl}
           placeholder="https://…"
         />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="e-cat">Categoría</Label>
+          <Input
+            id="e-cat"
+            name="category"
+            defaultValue={task.category}
+            placeholder="MESAS, SILLAS…"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="e-drive">Link Drive (archivo 3D)</Label>
+          <Input
+            id="e-drive"
+            name="driveUrl"
+            type="url"
+            defaultValue={task.driveUrl}
+            placeholder="https://drive…"
+          />
+        </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">

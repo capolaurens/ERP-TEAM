@@ -139,6 +139,8 @@ model Task {
   updatedAt   DateTime   @updatedAt
   googleEventId String?
   referenceUrl String?
+  category     String?
+  driveUrl     String?
 
   // Pipeline de validación 3D (malla -> textura -> completada)
   phase               ModelPhase @default(MESH)

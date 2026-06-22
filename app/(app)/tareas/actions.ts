@@ -155,6 +155,8 @@ export async function updateTask(formData: FormData) {
   const assigneeId = String(formData.get("assigneeId") ?? "").trim() || null;
   const projectId = String(formData.get("projectId") ?? "").trim() || null;
   const referenceUrl = String(formData.get("referenceUrl") ?? "").trim() || null;
+  const category = String(formData.get("category") ?? "").trim() || null;
+  const driveUrl = String(formData.get("driveUrl") ?? "").trim() || null;
 
   const status = STATUS_ORDER.includes(statusRaw) ? statusRaw : task.status;
   const priority = PRIORITIES.includes(priorityRaw) ? priorityRaw : task.priority;
@@ -193,7 +195,7 @@ export async function updateTask(formData: FormData) {
 
   await prisma.task.update({
     where: { id },
-    data: { title, description, status, priority, dueDate, assigneeId, projectId, referenceUrl },
+    data: { title, description, status, priority, dueDate, assigneeId, projectId, referenceUrl, category, driveUrl },
   });
 
   try {

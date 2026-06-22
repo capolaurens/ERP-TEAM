@@ -170,6 +170,8 @@ export default async function TaskDetailPage({
                       projectId: task.projectId ?? "",
                       dueInput: toDateInput(task.dueDate),
                       referenceUrl: task.referenceUrl ?? "",
+                      category: task.category ?? "",
+                      driveUrl: task.driveUrl ?? "",
                     }}
                     projects={projects.map((p) => ({ id: p.id, name: p.name }))}
                     members={members.map((m) => ({ id: m.id, name: m.name }))}
