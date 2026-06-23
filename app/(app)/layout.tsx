@@ -23,7 +23,7 @@ export default async function AppLayout({
           email={session.user.email ?? ""}
           role={session.user.role}
         />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-6 animate-fade-up">{children}</main>
       </div>
     </div>
   );

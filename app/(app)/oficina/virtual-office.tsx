@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Wifi, Bot } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/rbac";
 import { dicebearUrl, effectiveSeed } from "@/lib/avatars";
@@ -368,12 +368,35 @@ export function VirtualOffice({ meId }: { meId: string }) {
 
   const byRoom = (key: RoomKey) => online.filter((u) => roomFor(u) === key);
 
-  // posiciones de las personas por sala
-  const placed: { u: OnlineUser; left: number; top: number }[] = [];
+  // Deambular: cada persona se desplaza suavemente por su sala.
+  const onlineRef = useRef<OnlineUser[]>([]);
+  onlineRef.current = online;
+  const [pos, setPos] = useState<Record<string, { left: number; top: number }>>({});
+  useEffect(() => {
+    const tick = () => {
+      const next: Record<string, { left: number; top: number }> = {};
+      for (const u of onlineRef.current) {
+        const z = PEOPLE_ZONE[roomFor(u)];
+        next[u.id] = {
+          left: z.x0 + Math.random() * (z.x1 - z.x0),
+          top: z.y0 + Math.random() * (z.y1 - z.y0),
+        };
+      }
+      setPos(next);
+    };
+    tick();
+    const iv = setInterval(tick, 5000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // posición de respaldo (cuadrícula) hasta el primer movimiento
+  const fallbackPos: Record<string, { left: number; top: number }> = {};
   (Object.keys(PEOPLE_ZONE) as RoomKey[]).forEach((key) => {
     const members = byRoom(key);
     const pts = layout(members.length, PEOPLE_ZONE[key]);
-    members.forEach((u, i) => placed.push({ u, left: pts[i].left, top: pts[i].top }));
+    members.forEach((u, i) => {
+      fallbackPos[u.id] = pts[i];
+    });
   });
 
   const counts: Record<RoomKey, number> = {
@@ -399,8 +422,18 @@ export function VirtualOffice({ meId }: { meId: string }) {
 
       {/* ---- edificio ---- */}
       <div className="mx-auto w-full max-w-5xl">
-        <div className="relative aspect-[1000/760] w-full overflow-hidden rounded-2xl border-4 border-[#5b4127] shadow-xl">
+        <div className="relative aspect-[1000/760] w-full overflow-hidden rounded-2xl shadow-float ring-1 ring-black/10">
           <OfficeScene />
+
+          {/* iluminación cálida + viñeta (inmersión) */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ background: "radial-gradient(680px 360px at 24% 8%, rgba(255,244,214,0.20), transparent 62%)" }}
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ boxShadow: "inset 0 0 140px 36px rgba(0,0,0,0.30)" }}
+          />
 
           {/* carteles de las salas */}
           {ROOM_LABELS.map((r) => (
@@ -443,25 +476,37 @@ export function VirtualOffice({ meId }: { meId: string }) {
           })}
 
           {/* personas conectadas */}
-          {placed.map(({ u, left, top }, i) => {
+          {online.map((u, i) => {
             const isMe = u.id === meId;
+            const p = pos[u.id] ?? fallbackPos[u.id] ?? { left: 50, top: 50 };
             return (
               <div
                 key={u.id}
-                className="absolute z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
-                style={{ left: `${left}%`, top: `${top}%` }}
+                className="group absolute z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                style={{ left: `${p.left}%`, top: `${p.top}%`, transition: "left 4.6s ease-in-out, top 4.6s ease-in-out" }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={dicebearUrl(effectiveSeed(u.avatarSeed, u.name || u.id))}
-                  alt={u.name}
-                  className="[image-rendering:pixelated] drop-shadow-[0_3px_2px_rgba(0,0,0,0.4)]"
-                  style={{ width: "clamp(30px,3.6vw,52px)", animation: `office-bob 2.6s ease-in-out ${(i % 5) * 0.3}s infinite` }}
-                />
+                {/* tooltip al pasar el ratón */}
+                <div className="pointer-events-none absolute -top-8 z-40 whitespace-nowrap rounded-lg bg-black/85 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+                  {u.name} · {ROLE_LABELS[u.role] ?? u.role}
+                </div>
+                <div className="relative">
+                  {/* sombra en el suelo */}
+                  <span className="absolute -bottom-1 left-1/2 h-2 w-[58%] -translate-x-1/2 rounded-[50%] bg-black/30 blur-[2px]" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={dicebearUrl(effectiveSeed(u.avatarSeed, u.name || u.id))}
+                    alt={u.name}
+                    className={
+                      "relative [image-rendering:pixelated] drop-shadow-[0_5px_4px_rgba(0,0,0,0.4)] transition-transform duration-200 group-hover:scale-110 " +
+                      (isMe ? "rounded-full ring-2 ring-primary/70" : "")
+                    }
+                    style={{ width: "clamp(34px,4.1vw,58px)", animation: `office-bob 2.6s ease-in-out ${(i % 5) * 0.3}s infinite` }}
+                  />
+                </div>
                 <span
                   className={
-                    "mt-0.5 flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-medium shadow-sm sm:text-[10px] " +
-                    (isMe ? "bg-primary text-primary-foreground" : "bg-white/95 text-foreground")
+                    "relative mt-1 flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium shadow-sm backdrop-blur sm:text-[10px] " +
+                    (isMe ? "bg-primary text-primary-foreground" : "bg-white/90 text-foreground")
                   }
                 >
                   <span className="size-1.5 rounded-full bg-green-500" />

@@ -15,13 +15,13 @@ export function Topbar({
   role: Role;
 }) {
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/70 glass px-4 sm:px-6">
       <MobileNav role={role} />
       <div className="ml-auto flex items-center gap-3 sm:gap-4">
         <Link
           href="/perfil"
           title={email}
-          className="flex items-center gap-3 rounded-lg p-1 pr-2 transition hover:bg-muted"
+          className="flex items-center gap-3 rounded-xl p-1 pr-2 transition hover:bg-muted/70"
         >
           <div className="text-right">
             <div className="text-sm font-medium leading-tight">{name}</div>
@@ -29,7 +29,7 @@ export function Topbar({
               {ROLE_LABELS[role]}
             </div>
           </div>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-brand text-sm font-semibold text-white shadow-sm">
             {name.charAt(0).toUpperCase()}
           </div>
         </Link>

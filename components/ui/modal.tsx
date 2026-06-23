@@ -29,12 +29,12 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm sm:items-center"
       onMouseDown={onClose}
     >
       <div
         className={cn(
-          "w-full max-w-lg rounded-2xl border border-border bg-card text-left shadow-xl",
+          "animate-pop w-full max-w-lg rounded-2xl border border-border bg-card text-left shadow-float",
           className,
         )}
         onMouseDown={(e) => e.stopPropagation()}
