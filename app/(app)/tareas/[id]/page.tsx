@@ -1,21 +1,18 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Box } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 import { canAccessTeam, TEAM_LABELS } from "@/lib/rbac";
 import { STATUS_LABELS, PHASE_LABELS, PHASE_BADGE } from "@/lib/tasks";
-import { formatRelative, toDateInput, formatBytes } from "@/lib/format";
+import { formatRelative, toDateInput } from "@/lib/format";
 import { nextThursdays } from "@/lib/dates";
-import { isDriveConfigured } from "@/lib/drive";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ActivityType, TaskStatus } from "@/generated/prisma/enums";
 import { TaskEditForm } from "./task-edit-form";
 import { CommentForm } from "./comment-form";
 import { DeleteTaskButton } from "./delete-task-button";
-import { AttachmentUploader } from "./attachment-uploader";
-import { deleteAttachment } from "./attachment-actions";
 import { ModelPipeline } from "./model-pipeline";
 
 function activityText(type: ActivityType, meta: unknown): string {
@@ -60,7 +57,6 @@ export default async function TaskDetailPage({
       project: true,
       createdBy: true,
       comments: { include: { author: true }, orderBy: { createdAt: "asc" } },
-      attachments: { orderBy: { createdAt: "desc" } },
       activities: {
         include: { actor: true },
         orderBy: { createdAt: "desc" },
@@ -81,8 +77,6 @@ export default async function TaskDetailPage({
     canDelete: im.uploadedById === user.id || isAdmin,
   }));
 
-  const driveConfigured = isDriveConfigured();
-
   const [projects, members] = await Promise.all([
     prisma.project.findMany({
       where: { team: task.team, status: "active" },
@@ -95,7 +89,7 @@ export default async function TaskDetailPage({
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-5">
       <Link
         href="/tareas"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground"
@@ -104,27 +98,54 @@ export default async function TaskDetailPage({
         Volver a tareas
       </Link>
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">{task.title}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <Badge className="bg-primary/10 text-primary">
-              {TEAM_LABELS[task.team]}
-            </Badge>
-            {isDesign && (
-              <Badge className={PHASE_BADGE[task.phase]}>
-                {PHASE_LABELS[task.phase]}
-              </Badge>
-            )}
-            {task.clientApprovedAt && (
-              <Badge className="bg-green-100 text-green-700">Cliente ✓</Badge>
-            )}
-            {task.createdBy && <span>Creada por {task.createdBy.name}</span>}
+      {/* ---------- Hero ---------- */}
+      <Card>
+        <CardContent className="space-y-4 py-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge className="bg-primary/10 text-primary">{TEAM_LABELS[task.team]}</Badge>
+                {task.category && <Badge className="bg-muted text-foreground">{task.category}</Badge>}
+                {isDesign && (
+                  <Badge className={PHASE_BADGE[task.phase]}>{PHASE_LABELS[task.phase]}</Badge>
+                )}
+                {task.clientApprovedAt && (
+                  <Badge className="bg-green-100 text-green-700">Cliente ✓</Badge>
+                )}
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight">{task.title}</h1>
+            </div>
+            <DeleteTaskButton taskId={task.id} title={task.title} />
           </div>
-        </div>
-        <DeleteTaskButton taskId={task.id} title={task.title} />
-      </div>
 
+          {(task.driveUrl || task.referenceUrl) && (
+            <div className="flex flex-wrap gap-2">
+              {task.driveUrl && (
+                <a
+                  href={task.driveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"
+                >
+                  <Box className="size-4" /> Ver modelo 3D (Drive)
+                </a>
+              )}
+              {task.referenceUrl && (
+                <a
+                  href={task.referenceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-sm font-medium transition hover:bg-muted"
+                >
+                  <ExternalLink className="size-4" /> Ver producto (web)
+                </a>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ---------- Pipeline de validación (3D) ---------- */}
       {isDesign && (
         <ModelPipeline
           taskId={task.id}
@@ -133,171 +154,109 @@ export default async function TaskDetailPage({
           meshApprovedAt={task.meshApprovedAt}
           textureApprovedAt={task.textureApprovedAt}
           clientApprovedAt={task.clientApprovedAt}
-          referenceUrl={task.referenceUrl}
           images={images}
           isAdmin={isAdmin}
         />
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Detalles del producto</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {task.description && (
-                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                  {task.description}
-                </p>
-              )}
-              <details className="group rounded-lg border border-border">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-medium hover:bg-muted/50">
-                  <span>✎ Editar tarea</span>
-                  <span className="text-xs font-normal text-muted-foreground">
-                    estado · prioridad · responsable · entrega
-                  </span>
-                </summary>
-                <div className="border-t border-border p-3">
-                  <TaskEditForm
-                    task={{
-                      id: task.id,
-                      title: task.title,
-                      description: task.description ?? "",
-                      status: task.status,
-                      priority: task.priority,
-                      assigneeId: task.assigneeId ?? "",
-                      projectId: task.projectId ?? "",
-                      dueInput: toDateInput(task.dueDate),
-                      referenceUrl: task.referenceUrl ?? "",
-                      category: task.category ?? "",
-                      driveUrl: task.driveUrl ?? "",
-                    }}
-                    projects={projects.map((p) => ({ id: p.id, name: p.name }))}
-                    members={members.map((m) => ({ id: m.id, name: m.name }))}
-                    thursdays={thursdays}
-                  />
-                </div>
-              </details>
-            </CardContent>
-          </Card>
+      {/* ---------- Detalles (plegable) ---------- */}
+      <Card>
+        <CardContent className="space-y-3 py-4">
+          {task.description ? (
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground/60">Sin descripción.</p>
+          )}
+          <details className="group rounded-lg border border-border">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-medium hover:bg-muted/50">
+              <span>✎ Editar ficha</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                categoría · link Drive · estado · prioridad · entrega
+              </span>
+            </summary>
+            <div className="border-t border-border p-3">
+              <TaskEditForm
+                task={{
+                  id: task.id,
+                  title: task.title,
+                  description: task.description ?? "",
+                  status: task.status,
+                  priority: task.priority,
+                  assigneeId: task.assigneeId ?? "",
+                  projectId: task.projectId ?? "",
+                  dueInput: toDateInput(task.dueDate),
+                  referenceUrl: task.referenceUrl ?? "",
+                  category: task.category ?? "",
+                  driveUrl: task.driveUrl ?? "",
+                }}
+                projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+                members={members.map((m) => ({ id: m.id, name: m.name }))}
+                thursdays={thursdays}
+              />
+            </div>
+          </details>
+        </CardContent>
+      </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Comentarios ({task.comments.length})</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {task.comments.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Aún no hay comentarios. Sé el primero.
-                </p>
-              )}
-              {task.comments.length > 0 && (
-                <ul className="space-y-4">
-                  {task.comments.map((c) => (
-                    <li key={c.id} className="flex gap-3">
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                        {(c.author?.name ?? "?").charAt(0).toUpperCase()}
-                      </span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="font-medium">
-                            {c.author?.name ?? "Usuario"}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatRelative(c.createdAt)}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 whitespace-pre-wrap text-sm">
-                          {c.body}
-                        </p>
+      {/* ---------- Comentarios + Actividad ---------- */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Comentarios ({task.comments.length})</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {task.comments.length === 0 && (
+              <p className="text-sm text-muted-foreground">Aún no hay comentarios.</p>
+            )}
+            {task.comments.length > 0 && (
+              <ul className="space-y-4">
+                {task.comments.map((c) => (
+                  <li key={c.id} className="flex gap-3">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      {(c.author?.name ?? "?").charAt(0).toUpperCase()}
+                    </span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-medium">{c.author?.name ?? "Usuario"}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatRelative(c.createdAt)}
+                        </span>
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <CommentForm taskId={task.id} />
-            </CardContent>
-          </Card>
-        </div>
+                      <p className="mt-0.5 whitespace-pre-wrap text-sm">{c.body}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <CommentForm taskId={task.id} />
+          </CardContent>
+        </Card>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Actividad</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {task.activities.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Sin actividad todavía.
-                </p>
-              ) : (
-                <ul className="space-y-3">
-                  {task.activities.map((a) => (
-                    <li key={a.id} className="flex gap-2 text-sm">
-                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-border" />
-                      <div>
-                        <span className="font-medium">
-                          {a.actor?.name ?? "Alguien"}
-                        </span>{" "}
-                        {activityText(a.type, a.meta)}
-                        <div className="text-xs text-muted-foreground">
-                          {formatRelative(a.createdAt)}
-                        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Actividad</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {task.activities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin actividad todavía.</p>
+            ) : (
+              <ul className="space-y-3">
+                {task.activities.map((a) => (
+                  <li key={a.id} className="flex gap-2 text-sm">
+                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-border" />
+                    <div>
+                      <span className="font-medium">{a.actor?.name ?? "Alguien"}</span>{" "}
+                      {activityText(a.type, a.meta)}
+                      <div className="text-xs text-muted-foreground">
+                        {formatRelative(a.createdAt)}
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Archivos ({task.attachments.length})</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {task.attachments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Aún no hay archivos.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {task.attachments.map((f) => (
-                    <li
-                      key={f.id}
-                      className="flex items-center gap-2 rounded-lg border border-border p-2"
-                    >
-                      <FileText className="size-4 shrink-0 text-muted-foreground" />
-                      <a
-                        href={f.driveUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="min-w-0 flex-1 truncate text-sm hover:text-primary"
-                        title={f.fileName}
-                      >
-                        {f.fileName}
-                      </a>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {formatBytes(f.size)}
-                      </span>
-                      <form action={deleteAttachment}>
-                        <input type="hidden" name="id" value={f.id} />
-                        <button
-                          className="shrink-0 text-muted-foreground transition hover:text-red-600"
-                          title="Eliminar archivo"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      </form>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <AttachmentUploader taskId={task.id} configured={driveConfigured} />
-            </CardContent>
-          </Card>
-        </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
