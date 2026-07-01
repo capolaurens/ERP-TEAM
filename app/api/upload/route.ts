@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessTeam } from "@/lib/rbac";
-import { isDriveConfigured, uploadToFolder } from "@/lib/drive";
+import { isDriveConfigured, uploadToFolder, getOrCreateFolder } from "@/lib/drive";
 import { getTeamFolderId } from "@/lib/team-folders";
 import { logActivity } from "@/lib/activity";
 
@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sin acceso a esta tarea." }, { status: 403 });
   }
 
-  const folderId = await getTeamFolderId(task.team);
-  if (!folderId) {
+  const driveRoot = await getTeamFolderId(task.team);
+  if (!driveRoot) {
     return NextResponse.json(
       {
         error: `No hay carpeta de Drive configurada para el equipo. Un administrador debe asignarla en Ajustes.`,
@@ -53,8 +53,21 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Organiza sin tocar tu estructura: <unidad> / Subidas ERP / <proyecto> / <pieza>
+    const projName = task.projectId
+      ? (
+          await prisma.project.findUnique({
+            where: { id: task.projectId },
+            select: { name: true },
+          })
+        )?.name ?? "Sin proyecto"
+      : "Sin proyecto";
+    const base = await getOrCreateFolder(driveRoot, "Subidas ERP");
+    const projFolder = await getOrCreateFolder(base, projName);
+    const pieceFolder = await getOrCreateFolder(projFolder, task.title);
+
     const buffer = Buffer.from(await file.arrayBuffer());
-    const up = await uploadToFolder(folderId, {
+    const up = await uploadToFolder(pieceFolder, {
       name: file.name,
       mimeType: file.type || "application/octet-stream",
       buffer,

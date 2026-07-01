@@ -61,3 +61,36 @@ export async function deleteDriveFile(fileId: string): Promise<void> {
   const client = getClient();
   await client.files.delete({ fileId, supportsAllDrives: true });
 }
+
+/** Busca (o crea) una subcarpeta por nombre dentro de un padre. Devuelve su id. */
+export async function getOrCreateFolder(
+  parentId: string,
+  name: string,
+): Promise<string> {
+  const client = getClient();
+  const safe = name.replace(/['\\]/g, " ").trim() || "Sin nombre";
+  const q = `name = '${safe}' and mimeType = 'application/vnd.google-apps.folder' and '${parentId}' in parents and trashed = false`;
+  const found = await client.files.list({
+    q,
+    fields: "files(id,name)",
+    pageSize: 1,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+  const hit = found.data.files?.[0];
+  if (hit?.id) return hit.id;
+  const created = await client.files.create({
+    requestBody: {
+      name: safe,
+      mimeType: "application/vnd.google-apps.folder",
+      parents: [parentId],
+    },
+    fields: "id",
+    supportsAllDrives: true,
+  });
+  return created.data.id!;
+}
+
+export function folderLink(folderId: string): string {
+  return `https://drive.google.com/drive/folders/${folderId}`;
+}

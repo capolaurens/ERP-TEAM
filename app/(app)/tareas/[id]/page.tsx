@@ -1,18 +1,21 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Box } from "lucide-react";
+import { ArrowLeft, ExternalLink, Box, FileText, Trash2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 import { canAccessTeam, TEAM_LABELS } from "@/lib/rbac";
 import { STATUS_LABELS, PHASE_LABELS, PHASE_BADGE } from "@/lib/tasks";
-import { formatRelative, toDateInput } from "@/lib/format";
+import { formatRelative, toDateInput, formatBytes } from "@/lib/format";
 import { nextThursdays } from "@/lib/dates";
+import { isDriveConfigured } from "@/lib/drive";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ActivityType, TaskStatus } from "@/generated/prisma/enums";
 import { TaskEditForm } from "./task-edit-form";
 import { CommentForm } from "./comment-form";
 import { DeleteTaskButton } from "./delete-task-button";
+import { AttachmentUploader } from "./attachment-uploader";
+import { deleteAttachment } from "./attachment-actions";
 import { ModelPipeline } from "./model-pipeline";
 
 function activityText(type: ActivityType, meta: unknown): string {
@@ -63,12 +66,14 @@ export default async function TaskDetailPage({
         take: 40,
       },
       modelImages: { orderBy: { createdAt: "desc" } },
+      attachments: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!task || !canAccessTeam(user, task.team)) notFound();
 
   const isAdmin = user.role === "ADMIN";
   const isDesign = task.team === "DESIGN";
+  const driveConfigured = isDriveConfigured();
   const thursdays = nextThursdays(12);
   const images = task.modelImages.map((im) => ({
     id: im.id,
@@ -158,6 +163,55 @@ export default async function TaskDetailPage({
           isAdmin={isAdmin}
         />
       )}
+
+      {/* ---------- Archivos en Drive ---------- */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <CardTitle>Archivos en Drive ({task.attachments.length})</CardTitle>
+          <AttachmentUploader taskId={task.id} configured={driveConfigured} />
+        </CardHeader>
+        <CardContent>
+          {task.attachments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {driveConfigured
+                ? "Sube el modelo, renders o cualquier archivo — se guardan en tu Drive (NAVYX 3D)."
+                : "La subida a Drive aún no está configurada."}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {task.attachments.map((f) => (
+                <li
+                  key={f.id}
+                  className="flex items-center gap-2 rounded-xl border border-border p-2.5"
+                >
+                  <FileText className="size-4 shrink-0 text-muted-foreground" />
+                  <a
+                    href={f.driveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 flex-1 truncate text-sm hover:text-primary"
+                    title={f.fileName}
+                  >
+                    {f.fileName}
+                  </a>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatBytes(f.size)}
+                  </span>
+                  <form action={deleteAttachment}>
+                    <input type="hidden" name="id" value={f.id} />
+                    <button
+                      className="shrink-0 text-muted-foreground transition hover:text-red-600"
+                      title="Eliminar archivo"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ---------- Detalles (plegable) ---------- */}
       <Card>
