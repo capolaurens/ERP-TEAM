@@ -122,7 +122,7 @@ export default function NorthdecoPage() {
         <span>Julio 2026</span>
       </footer>
 
-      <script src="/northdeco/gallery.js" defer />
+      <script src="/northdeco/gallery.js?v=2" defer />
     </div>
   );
 }
@@ -208,8 +208,13 @@ const CSS = `
   height:16px;border-radius:100px;display:inline-grid;place-items:center;padding:0 4px}
 .nx-comments{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .nx-comments:empty{display:none}
-.nx-cmt-item{background:var(--paper);border:1px solid var(--line);border-radius:9px;
-  padding:7px 10px;font-size:12.5px;line-height:1.45}
+.nx-cmt-item{position:relative;background:var(--paper);border:1px solid var(--line);
+  border-radius:9px;padding:7px 26px 7px 10px;font-size:12.5px;line-height:1.45}
+.nx-cmt-del{position:absolute;top:4px;right:5px;width:19px;height:19px;border:0;padding:0;
+  background:transparent;color:var(--faint);font-size:16px;line-height:1;cursor:pointer;
+  border-radius:5px;display:grid;place-items:center;transition:color .12s,background .12s}
+.nx-cmt-del:hover{color:#d9534f;background:rgba(217,83,79,.13)}
+.nx-cmt-del:disabled{opacity:.4;cursor:default}
 .nx-cmt-author{font-weight:660;color:var(--ink);margin-right:6px}
 .nx-cmt-body{color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
 .nx-cmt-form{display:flex;flex-direction:column;gap:6px}

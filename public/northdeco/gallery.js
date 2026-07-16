@@ -61,7 +61,7 @@
     });
   }
 
-  function addComment(ul, c) {
+  function addComment(ul, c, file, onDelete) {
     var li = document.createElement("li");
     li.className = "nx-cmt-item";
     if (c.author) {
@@ -74,6 +74,28 @@
     b.className = "nx-cmt-body";
     b.textContent = c.text; // textContent => sin XSS
     li.appendChild(b);
+    if (c.id) {
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "nx-cmt-del";
+      del.setAttribute("aria-label", "Quitar comentario");
+      del.setAttribute("title", "Quitar");
+      del.textContent = "×";
+      del.addEventListener("click", function () {
+        del.disabled = true;
+        post({ action: "deleteComment", file: file, id: c.id })
+          .then(function (res) {
+            if (res && res.ok) {
+              if (li.parentNode) li.parentNode.removeChild(li);
+              if (onDelete) onDelete();
+            } else del.disabled = false;
+          })
+          .catch(function () {
+            del.disabled = false;
+          });
+      });
+      li.appendChild(del);
+    }
     ul.appendChild(li);
   }
 
@@ -136,7 +158,7 @@
         })
           .then(function (res) {
             if (res && res.comment) {
-              addComment(ul, res.comment);
+              addComment(ul, res.comment, file, setCount);
               setCount();
               text.value = "";
               form.hidden = true;
@@ -168,7 +190,7 @@
           if (checks[r.file] && r.chk) r.chk.checked = true;
           var list = comments[r.file] || [];
           list.forEach(function (c) {
-            addComment(r.ul, c);
+            addComment(r.ul, c, r.file, r.setCount);
           });
           r.setCount();
         });

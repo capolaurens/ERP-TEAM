@@ -33,17 +33,18 @@ export async function GET() {
       }),
       prisma.northdecoComment.findMany({
         orderBy: { createdAt: "asc" },
-        select: { file: true, author: true, text: true, createdAt: true },
+        select: { id: true, file: true, author: true, text: true, createdAt: true },
       }),
     ]);
     const checks: Record<string, boolean> = {};
     for (const r of reviews) checks[r.file] = true;
     const byFile: Record<
       string,
-      { author: string | null; text: string; createdAt: string }[]
+      { id: string; author: string | null; text: string; createdAt: string }[]
     > = {};
     for (const c of comments) {
       (byFile[c.file] ||= []).push({
+        id: c.id,
         author: c.author,
         text: c.text,
         createdAt: c.createdAt.toISOString(),
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
     checked?: boolean;
     text?: string;
     author?: string;
+    id?: string;
   };
   try {
     body = await req.json();
@@ -105,11 +107,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok: true,
         comment: {
+          id: c.id,
           author: c.author,
           text: c.text,
           createdAt: c.createdAt.toISOString(),
         },
       });
+    }
+
+    if (body.action === "deleteComment") {
+      const id = typeof body.id === "string" ? body.id : "";
+      if (!id) {
+        return NextResponse.json({ error: "Falta id" }, { status: 400 });
+      }
+      // Borrado abierto (como un Google Sheets compartido): cualquiera con el
+      // enlace puede quitar un comentario. deleteMany = idempotente.
+      await prisma.northdecoComment.deleteMany({ where: { id, file } });
+      return NextResponse.json({ ok: true });
     }
 
     return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
