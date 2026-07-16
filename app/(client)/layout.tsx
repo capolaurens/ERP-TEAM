@@ -36,7 +36,7 @@ export default async function ClientLayout({
           </form>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl p-6">{children}</main>
+      <main className="px-4 py-6 sm:px-6">{children}</main>
     </div>
   );
 }

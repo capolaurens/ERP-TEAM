@@ -4,6 +4,8 @@ import { visibleTeams } from "@/lib/rbac";
 import { formatDate } from "@/lib/format";
 import { TasksView } from "./tasks-view";
 import type { TaskCardData } from "./task-card";
+import { PipelineView } from "./pipeline-view";
+import type { PipelinePiece } from "./pipeline-board";
 
 export default async function TareasPage() {
   const user = await requireAuth();
@@ -24,6 +26,40 @@ export default async function TareasPage() {
       orderBy: { name: "asc" },
     }),
   ]);
+
+  // Los DISEÑADORES (chicos de prácticas 3D) usan el tablero de PIPELINE por
+  // fases; el resto de equipos, el tablero normal por estado.
+  if (user.role === "DESIGN") {
+    const pieces: PipelinePiece[] = tasksRaw.map((t) => ({
+      id: t.id,
+      title: t.title,
+      projectId: t.projectId,
+      projectName: t.project?.name ?? null,
+      meshSubmitted: !!t.meshSubmittedAt,
+      meshApproved: !!t.meshApprovedAt,
+      clientMesh: !!t.clientMeshAt,
+      textureSubmitted: !!t.textureSubmittedAt,
+      textureApproved: !!t.textureApprovedAt,
+      clientTexture: !!t.clientTextureAt,
+    }));
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Tareas</h1>
+          <p className="max-w-3xl text-muted-foreground">
+            Tu pipeline de piezas 3D. Haz la <strong>malla</strong> y arrástrala a{" "}
+            <strong>Malla terminada</strong>; cuando el cliente la apruebe, la
+            pieza vuelve a <strong>Para textura</strong>. Termina la textura y
+            arrástrala a <strong>Textura añadida</strong>.
+          </p>
+        </div>
+        <PipelineView
+          pieces={pieces}
+          projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+        />
+      </div>
+    );
+  }
 
   const now = Date.now();
   const all: TaskCardData[] = tasksRaw.map((t) => ({

@@ -6,10 +6,14 @@ import { canAccessTeam } from "@/lib/rbac";
 import { isDriveConfigured, uploadToFolder, getOrCreateFolder } from "@/lib/drive";
 import { getTeamFolderId } from "@/lib/team-folders";
 import { logActivity } from "@/lib/activity";
+import { compressGlbBuffer, isGlb } from "@/lib/compressor";
 
 export const runtime = "nodejs";
+export const maxDuration = 300; // comprimir un modelo pesado puede tardar unos segundos
 
-const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
+// El modelo entra pesado (se comprime a <1MB antes de ir a Drive), por eso el
+// límite de entrada es alto.
+const MAX_BYTES = 120 * 1024 * 1024; // 120 MB
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -67,10 +71,37 @@ export async function POST(req: NextRequest) {
     const pieceFolder = await getOrCreateFolder(projFolder, task.title);
 
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    // "Mega compresor": si es un GLB/glTF, lo comprimimos (malla + textura +
+    // Draco) antes de subirlo a Drive → queda <1MB. No-fatal: si algo falla,
+    // sube el original.
+    let uploadBuffer: Buffer = buffer;
+    let uploadMime = file.type || "application/octet-stream";
+    let compression:
+      | { before: number; after: number; trisBefore: number; trisAfter: number }
+      | null = null;
+    if (isGlb(file.name, file.type)) {
+      try {
+        const r = await compressGlbBuffer(buffer);
+        if (r.bytesAfter > 0 && r.bytesAfter < buffer.length) {
+          uploadBuffer = r.buffer;
+          uploadMime = "model/gltf-binary";
+          compression = {
+            before: r.bytesBefore,
+            after: r.bytesAfter,
+            trisBefore: r.trisBefore,
+            trisAfter: r.trisAfter,
+          };
+        }
+      } catch (err) {
+        console.error("Compresión GLB falló, subo el original:", err);
+      }
+    }
+
     const up = await uploadToFolder(pieceFolder, {
       name: file.name,
-      mimeType: file.type || "application/octet-stream",
-      buffer,
+      mimeType: uploadMime,
+      buffer: uploadBuffer,
     });
 
     const att = await prisma.attachment.create({
@@ -94,7 +125,7 @@ export async function POST(req: NextRequest) {
     });
 
     revalidatePath(`/tareas/${taskId}`);
-    return NextResponse.json({ ok: true, id: att.id });
+    return NextResponse.json({ ok: true, id: att.id, compression });
   } catch (e) {
     console.error("Error subiendo a Drive:", e);
     return NextResponse.json(

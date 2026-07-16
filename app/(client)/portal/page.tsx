@@ -20,7 +20,7 @@ export default async function PortalPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Tus proyectos</h1>
         <p className="text-muted-foreground">

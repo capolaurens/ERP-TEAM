@@ -20,6 +20,9 @@ export default {
       const isLoggedIn = !!auth?.user;
       const isOnLogin = nextUrl.pathname.startsWith("/login");
 
+      // Rutas públicas de cara a cliente (galerías 3D) — sin sesión.
+      if (nextUrl.pathname.startsWith("/northdeco")) return true;
+
       if (isOnLogin) {
         if (isLoggedIn) return Response.redirect(new URL("/", nextUrl));
         return true; // permitir ver el login

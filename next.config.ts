@@ -16,6 +16,18 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Permite acceder al dev server desde otras máquinas de la LAN (solo dev).
+  allowedDevOrigins: ["192.168.1.100", "192.168.1.102", "localhost", "127.0.0.1"],
+  // El compresor 3D usa libs nativas/WASM: que Next NO las empaquete (se cargan
+  // en runtime desde node_modules). Si no, el bundle peta con los .wasm/.node.
+  serverExternalPackages: [
+    "sharp",
+    "draco3dgltf",
+    "meshoptimizer",
+    "gltf-pipeline",
+    "@gltf-transform/core",
+    "@gltf-transform/extensions",
+  ],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

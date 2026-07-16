@@ -94,3 +94,54 @@ export async function getOrCreateFolder(
 export function folderLink(folderId: string): string {
   return `https://drive.google.com/drive/folders/${folderId}`;
 }
+
+/**
+ * Extrae el fileId de un enlace de Drive (`/file/d/<ID>/…`, `…?id=<ID>`,
+ * `/folders/<ID>`) o devuelve el propio id si ya viene "pelado".
+ */
+export function extractDriveFileId(
+  input: string | null | undefined,
+): string | null {
+  if (!input) return null;
+  const s = input.trim();
+  if (!s) return null;
+  const m =
+    s.match(/\/(?:file\/d|d)\/([-\w]{20,})/) ||
+    s.match(/[?&]id=([-\w]{20,})/) ||
+    s.match(/\/folders\/([-\w]{20,})/);
+  if (m) return m[1];
+  if (/^[-\w]{20,}$/.test(s)) return s;
+  return null;
+}
+
+export type DriveDownload = {
+  buffer: Buffer;
+  mimeType: string;
+  name: string;
+  size: number;
+};
+
+/**
+ * Descarga los bytes de un archivo de Drive por su id usando la cuenta de
+ * servicio. La carpeta que lo contiene debe estar compartida con el email de
+ * `getServiceAccountEmail()`. Así el cliente puede ver el 3D sin acceso a Drive.
+ */
+export async function downloadFile(fileId: string): Promise<DriveDownload> {
+  const client = getClient();
+  const meta = await client.files.get({
+    fileId,
+    fields: "name, mimeType, size",
+    supportsAllDrives: true,
+  });
+  const res = await client.files.get(
+    { fileId, alt: "media", supportsAllDrives: true },
+    { responseType: "arraybuffer" },
+  );
+  const buffer = Buffer.from(res.data as ArrayBuffer);
+  return {
+    buffer,
+    mimeType: meta.data.mimeType ?? "application/octet-stream",
+    name: meta.data.name ?? "modelo",
+    size: buffer.byteLength,
+  };
+}

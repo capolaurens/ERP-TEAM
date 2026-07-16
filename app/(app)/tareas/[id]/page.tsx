@@ -5,18 +5,15 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 import { canAccessTeam, TEAM_LABELS } from "@/lib/rbac";
 import { STATUS_LABELS, PHASE_LABELS, PHASE_BADGE } from "@/lib/tasks";
-import { formatRelative, toDateInput, formatBytes } from "@/lib/format";
-import { nextThursdays } from "@/lib/dates";
+import { formatRelative, formatBytes } from "@/lib/format";
 import { isDriveConfigured } from "@/lib/drive";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ActivityType, TaskStatus } from "@/generated/prisma/enums";
-import { TaskEditForm } from "./task-edit-form";
 import { CommentForm } from "./comment-form";
 import { DeleteTaskButton } from "./delete-task-button";
 import { AttachmentUploader } from "./attachment-uploader";
 import { deleteAttachment } from "./attachment-actions";
-import { ModelPipeline } from "./model-pipeline";
 
 function activityText(type: ActivityType, meta: unknown): string {
   const m = (meta ?? {}) as Record<string, unknown>;
@@ -65,33 +62,13 @@ export default async function TaskDetailPage({
         orderBy: { createdAt: "desc" },
         take: 40,
       },
-      modelImages: { orderBy: { createdAt: "desc" } },
       attachments: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!task || !canAccessTeam(user, task.team)) notFound();
 
-  const isAdmin = user.role === "ADMIN";
   const isDesign = task.team === "DESIGN";
   const driveConfigured = isDriveConfigured();
-  const thursdays = nextThursdays(12);
-  const images = task.modelImages.map((im) => ({
-    id: im.id,
-    phase: im.phase,
-    kind: im.kind,
-    canDelete: im.uploadedById === user.id || isAdmin,
-  }));
-
-  const [projects, members] = await Promise.all([
-    prisma.project.findMany({
-      where: { team: task.team, status: "active" },
-      orderBy: { name: "asc" },
-    }),
-    prisma.user.findMany({
-      where: { active: true, team: task.team },
-      orderBy: { name: "asc" },
-    }),
-  ]);
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
@@ -150,20 +127,6 @@ export default async function TaskDetailPage({
         </CardContent>
       </Card>
 
-      {/* ---------- Pipeline de validación (3D) ---------- */}
-      {isDesign && (
-        <ModelPipeline
-          taskId={task.id}
-          phase={task.phase}
-          changesRequested={task.changesRequested}
-          meshApprovedAt={task.meshApprovedAt}
-          textureApprovedAt={task.textureApprovedAt}
-          clientApprovedAt={task.clientApprovedAt}
-          images={images}
-          isAdmin={isAdmin}
-        />
-      )}
-
       {/* ---------- Archivos en Drive ---------- */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2">
@@ -213,44 +176,16 @@ export default async function TaskDetailPage({
         </CardContent>
       </Card>
 
-      {/* ---------- Detalles (plegable) ---------- */}
-      <Card>
-        <CardContent className="space-y-3 py-4">
-          {task.description ? (
-            <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground/60">Sin descripción.</p>
-          )}
-          <details className="group rounded-lg border border-border">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-medium hover:bg-muted/50">
-              <span>✎ Editar ficha</span>
-              <span className="text-xs font-normal text-muted-foreground">
-                categoría · link Drive · estado · prioridad · entrega
-              </span>
-            </summary>
-            <div className="border-t border-border p-3">
-              <TaskEditForm
-                task={{
-                  id: task.id,
-                  title: task.title,
-                  description: task.description ?? "",
-                  status: task.status,
-                  priority: task.priority,
-                  assigneeId: task.assigneeId ?? "",
-                  projectId: task.projectId ?? "",
-                  dueInput: toDateInput(task.dueDate),
-                  referenceUrl: task.referenceUrl ?? "",
-                  category: task.category ?? "",
-                  driveUrl: task.driveUrl ?? "",
-                }}
-                projects={projects.map((p) => ({ id: p.id, name: p.name }))}
-                members={members.map((m) => ({ id: m.id, name: m.name }))}
-                thursdays={thursdays}
-              />
-            </div>
-          </details>
-        </CardContent>
-      </Card>
+      {/* ---------- Descripción (si la hay) ---------- */}
+      {task.description && (
+        <Card>
+          <CardContent className="py-4">
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+              {task.description}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ---------- Comentarios + Actividad ---------- */}
       <div className="grid gap-4 md:grid-cols-2">

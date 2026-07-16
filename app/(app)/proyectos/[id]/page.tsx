@@ -10,6 +10,7 @@ import { TaskBoard } from "../../tareas/task-board";
 import { TaskCreateModal } from "../../tareas/task-create-modal";
 import { ProjectEditForm } from "../project-edit-form";
 import type { TaskCardData } from "../../tareas/task-card";
+import { PiecesTable, type PieceRow } from "./pieces-table";
 
 export default async function ProjectDetailPage({
   params,
@@ -22,17 +23,34 @@ export default async function ProjectDetailPage({
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project || !canAccessTeam(user, project.team)) notFound();
 
+  // Los proyectos de Diseño/3D usan la tabla plana de piezas (tipo Excel);
+  // el resto sigue con el tablero Kanban.
+  const isDesign = project.team === "DESIGN";
+
   const [tasksRaw, members] = await Promise.all([
     prisma.task.findMany({
-      where: { projectId: id, status: { not: "DONE" } },
+      where: isDesign
+        ? { projectId: id }
+        : { projectId: id, status: { not: "DONE" } },
       include: { assignee: true, project: true },
-      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+      orderBy: isDesign
+        ? [{ title: "asc" }]
+        : [{ order: "asc" }, { createdAt: "desc" }],
     }),
     prisma.user.findMany({
       where: { active: true, team: project.team },
       orderBy: { name: "asc" },
     }),
   ]);
+
+  const pieces: PieceRow[] = tasksRaw.map((t) => ({
+    id: t.id,
+    title: t.title,
+    referenceUrl: t.referenceUrl,
+    driveUrl: t.driveUrl,
+    mesh: !!t.meshSubmittedAt,
+    texture: !!t.textureSubmittedAt,
+  }));
 
   const now = Date.now();
   const tasks: TaskCardData[] = tasksRaw.map((t) => ({
@@ -126,7 +144,15 @@ export default async function ProjectDetailPage({
         </div>
       </div>
 
-      {tasks.length === 0 ? (
+      {isDesign ? (
+        pieces.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center text-sm text-muted-foreground">
+            Este proyecto aún no tiene piezas.
+          </div>
+        ) : (
+          <PiecesTable pieces={pieces} />
+        )
+      ) : tasks.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center text-sm text-muted-foreground">
           Este proyecto aún no tiene tareas. Crea la primera con «Nueva tarea».
         </div>

@@ -152,6 +152,19 @@ model Task {
   clientApprovedAt    DateTime?
   clientApprovedById  String?
 
+  // Portal del cliente (2026-07): el CLIENTE marca malla/textura; el ADMIN
+  // abre la pieza al cliente con showToClient (si está en false no le aparece).
+  clientMeshAt        DateTime?
+  clientTextureAt     DateTime?
+  showToClient        Boolean    @default(false)
+
+  // Pipeline por fases (2026-07-08): el CHICO de diseño ENVÍA la malla/textura
+  // (distinto de la aprobación del admin). De estos + los *ApprovedAt/client*At
+  // se derivan las columnas del tablero (Sin empezar / Malla terminada / Para
+  // textura / Textura añadida).
+  meshSubmittedAt     DateTime?
+  textureSubmittedAt  DateTime?
+
   comments    Comment[]
   attachments Attachment[]
   activities  Activity[]
@@ -315,4 +328,22 @@ model WorkSession {
 
   @@index([userId])
   @@index([startedAt])
+}
+
+/// Revisión pública de la galería 3D de Northdeco: check + comentarios que deja
+/// el cliente (sin login) desde /northdeco. Un review por modelo (file = GLB).
+model NorthdecoReview {
+  file      String   @id
+  checked   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+model NorthdecoComment {
+  id        String   @id @default(cuid())
+  file      String
+  author    String?
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([file])
 }
