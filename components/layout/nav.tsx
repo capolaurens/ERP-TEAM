@@ -9,6 +9,7 @@ import {
   Calendar,
   Users,
   Settings,
+  ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
@@ -27,6 +28,7 @@ export const NAV: NavItem[] = [
   { href: "/tareas", label: "Tareas", icon: CheckSquare },
   { href: "/proyectos", label: "Proyectos", icon: FolderKanban },
   { href: "/calendario", label: "Calendario", icon: Calendar },
+  { href: "/revision", label: "Revisión", icon: ClipboardCheck, adminOnly: true },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users, adminOnly: true },
   { href: "/admin/ajustes", label: "Ajustes", icon: Settings, adminOnly: true },
 ];
