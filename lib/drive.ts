@@ -145,3 +145,32 @@ export async function downloadFile(fileId: string): Promise<DriveDownload> {
     size: buffer.byteLength,
   };
 }
+
+/**
+ * Descarga un archivo de Drive como STREAM (no bufferiza en memoria) — para
+ * servir GLB pesados sin cargarlos enteros en RAM. Devuelve también el tamaño
+ * (Content-Length) para que el navegador muestre progreso.
+ */
+export async function downloadFileStream(fileId: string): Promise<{
+  stream: NodeJS.ReadableStream;
+  name: string;
+  mimeType: string;
+  size: number | null;
+}> {
+  const client = getClient();
+  const meta = await client.files.get({
+    fileId,
+    fields: "name, mimeType, size",
+    supportsAllDrives: true,
+  });
+  const res = await client.files.get(
+    { fileId, alt: "media", supportsAllDrives: true },
+    { responseType: "stream" },
+  );
+  return {
+    stream: res.data as unknown as NodeJS.ReadableStream,
+    name: meta.data.name ?? "modelo",
+    mimeType: meta.data.mimeType ?? "application/octet-stream",
+    size: meta.data.size ? Number(meta.data.size) : null,
+  };
+}

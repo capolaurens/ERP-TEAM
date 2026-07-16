@@ -12,6 +12,7 @@ type Model = {
   fam: string;
   name: string;
   status: "listo" | "revision";
+  driveId: string;
 };
 
 export default function NorthdecoPage() {
@@ -61,7 +62,7 @@ export default function NorthdecoPage() {
             key={m.file}
             data-status={m.status}
             data-file={m.file}
-            data-src={`/northdeco/models/${m.file}`}
+            data-src={`/api/northdeco/model/${m.driveId}`}
             data-alt={`${m.fam} ${m.name}`}
           >
             <div className="nx-viewer">
