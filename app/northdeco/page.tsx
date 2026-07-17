@@ -123,7 +123,7 @@ export default function NorthdecoPage() {
         <span>Julio 2026</span>
       </footer>
 
-      <script src="/northdeco/gallery.js?v=2" defer />
+      <script src="/northdeco/gallery.js?v=3" defer />
     </div>
   );
 }

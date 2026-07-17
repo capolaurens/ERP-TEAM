@@ -16,6 +16,9 @@
   }
 
   var MV_ATTRS = {
+    // La COLA de abajo decide cuándo carga cada modelo (4 a la vez, por
+    // cercanía al viewport); model-viewer no debe re-aplazar con su lazy interno.
+    loading: "eager",
     "camera-controls": "",
     "touch-action": "pan-y",
     "auto-rotate": "",
@@ -29,25 +32,98 @@
     exposure: "1.05",
   };
 
-  function mount(card) {
+  /* --- Carga progresiva ---------------------------------------------------
+     Los GLB originales pesan mucho (~20MB): si todas las tarjetas visibles
+     descargan a la vez, la página se ahoga. Cola con máximo MAX_PARALLEL
+     descargas simultáneas, en orden visual (primeras filas primero). El
+     spinner se mantiene hasta que el modelo termina de cargar. */
+  var MAX_PARALLEL = 4;
+  var LOAD_TIMEOUT = 120000; // suelta el hueco si una descarga se eterniza
+  var active = 0;
+  var queue = [];
+
+  function byPosition(a, b) {
+    return a.offsetTop - b.offsetTop || a.offsetLeft - b.offsetLeft;
+  }
+
+  function releaseSlot(card) {
+    if (card.__nxHolds) {
+      card.__nxHolds = false;
+      active = Math.max(0, active - 1);
+    }
+    pump();
+  }
+
+  function startLoad(card) {
     var viewer = card.querySelector(".nx-viewer");
-    if (!viewer || viewer.querySelector("model-viewer")) return;
+    if (!viewer) return;
+    if (viewer.querySelector("model-viewer")) {
+      card.__nxState = "loaded";
+      return;
+    }
+    card.__nxState = "loading";
+    card.__nxHolds = true;
+    active++;
+
     var m = document.createElement("model-viewer");
-    m.setAttribute("src", card.getAttribute("data-src"));
     m.setAttribute("alt", card.getAttribute("data-alt") || "");
     for (var k in MV_ATTRS) m.setAttribute(k, MV_ATTRS[k]);
-    var ph = viewer.querySelector(".nx-ph");
-    if (ph) ph.style.display = "none";
+
+    var timer = setTimeout(function () {
+      releaseSlot(card); // sigue descargando, pero deja pasar a los demás
+    }, LOAD_TIMEOUT);
+    m.addEventListener(
+      "load",
+      function () {
+        clearTimeout(timer);
+        var ph = viewer.querySelector(".nx-ph");
+        if (ph) ph.style.display = "none";
+        card.__nxState = "loaded";
+        releaseSlot(card);
+      },
+      { once: true },
+    );
+    m.addEventListener(
+      "error",
+      function () {
+        clearTimeout(timer);
+        card.__nxState = "error";
+        releaseSlot(card);
+      },
+      { once: true },
+    );
+
+    m.setAttribute("src", card.getAttribute("data-src"));
     viewer.appendChild(m);
+  }
+
+  function pump() {
+    if (!queue.length || active >= MAX_PARALLEL) return;
+    queue.sort(byPosition); // de arriba hacia abajo
+    while (active < MAX_PARALLEL && queue.length) {
+      var card = queue.shift();
+      if (card.__nxState !== "queued" || !card.isConnected) continue;
+      startLoad(card);
+    }
+  }
+
+  function mount(card) {
+    var st = card.__nxState;
+    if (st === "queued" || st === "loading" || st === "loaded") return;
+    card.__nxState = "queued";
+    queue.push(card);
+    pump();
   }
 
   function unmount(card) {
     var viewer = card.querySelector(".nx-viewer");
     if (!viewer) return;
     var m = viewer.querySelector("model-viewer");
-    if (m) m.remove(); // libera el contexto WebGL / memoria GPU
+    if (m) m.remove(); // libera el contexto WebGL / memoria GPU (aborta la descarga)
     var ph = viewer.querySelector(".nx-ph");
     if (ph) ph.style.display = "";
+    card.__nxState = null; // si estaba en cola, pump() la descarta
+    releaseSlot(card);
   }
 
   // --- Feedback (check + comentarios) ---
@@ -218,6 +294,18 @@
       cards.forEach(function (c) {
         io.observe(c);
       });
+      // Respaldo: si el observer no reacciona (viewport 0, embeds raros…),
+      // encola todo igualmente — la cola mantiene el goteo de 4 en 4 en orden.
+      setTimeout(function () {
+        var touched = false;
+        for (var i = 0; i < cards.length; i++) {
+          if (cards[i].__nxState !== undefined) {
+            touched = true;
+            break;
+          }
+        }
+        if (!touched) cards.forEach(mount);
+      }, 1500);
     } else {
       cards.forEach(mount);
     }
