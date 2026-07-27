@@ -51,12 +51,23 @@ export default function NorthdecoPage() {
             <button data-filter="revision" type="button">
               Cristal en revisión <span>{models.length - listo}</span>
             </button>
+            <button data-filter="pendientes" type="button">
+              Sin revisar <span data-n="pendientes">…</span>
+            </button>
             <button data-filter="visto" type="button">
               ✓ Visto bueno <span data-n="visto">0</span>
             </button>
             <button data-filter="comentados" type="button">
               💬 Comentados <span data-n="comentados">0</span>
             </button>
+          </div>
+          <div className="nx-progress" aria-label="Progreso de la revisión">
+            <div className="nx-progress-track">
+              <span className="nx-progress-fill" data-progress-bar />
+            </div>
+            <span className="nx-progress-lbl" data-progress-label>
+              Cargando progreso…
+            </span>
           </div>
         </div>
       </header>
@@ -129,7 +140,7 @@ export default function NorthdecoPage() {
         <span>Julio 2026</span>
       </footer>
 
-      <script src="/northdeco/gallery.js?v=4" defer />
+      <script src="/northdeco/gallery.js?v=5" defer />
     </div>
   );
 }
@@ -163,6 +174,10 @@ const CSS = `
 .nx-sub{color:var(--muted);font-size:15px;line-height:1.6;margin:12px 0 0;max-width:60ch}
 .nx-sub b{color:var(--ink);font-weight:600}
 .nx-toolbar{margin-top:22px}
+.nx-progress{margin-top:14px;display:flex;align-items:center;gap:10px;max-width:430px}
+.nx-progress-track{flex:1;height:6px;border-radius:100px;background:var(--line);overflow:hidden}
+.nx-progress-fill{display:block;height:100%;width:0;background:var(--brand);border-radius:100px;transition:width .4s ease}
+.nx-progress-lbl{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .nx-filters{display:inline-flex;flex-wrap:wrap;gap:6px;background:var(--raise);
   border:1px solid var(--line);border-radius:100px;padding:5px}
 .nx-filters button{font-family:inherit;font-size:13.5px;font-weight:560;color:var(--muted);

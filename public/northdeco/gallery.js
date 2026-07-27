@@ -126,25 +126,47 @@
     releaseSlot(card);
   }
 
-  /* Contadores de los filtros "Visto bueno" y "Comentados" (en vivo). */
+  /* Una pieza cuenta como "revisada" si tiene el check o algún comentario. */
+  function isReviewed(c) {
+    var i = c.querySelector(".nx-check-input");
+    return !!(i && i.checked) || !!c.querySelector(".nx-cmt-item");
+  }
+
+  /* Contadores de filtros + barra de progreso de la revisión (en vivo). */
   function updateCounts() {
-    var visto = document.querySelectorAll(
-      ".nx-card .nx-check-input:checked",
-    ).length;
-    var comentados = 0;
     var all = document.querySelectorAll(".nx-card");
+    var visto = 0;
+    var comentados = 0;
+    var revisadas = 0;
     for (var i = 0; i < all.length; i++) {
-      if (all[i].querySelector(".nx-cmt-item")) comentados++;
+      var chk = all[i].querySelector(".nx-check-input");
+      var hasChk = !!(chk && chk.checked);
+      var hasCmt = !!all[i].querySelector(".nx-cmt-item");
+      if (hasChk) visto++;
+      if (hasCmt) comentados++;
+      if (hasChk || hasCmt) revisadas++;
     }
     var a = document.querySelector('[data-n="visto"]');
     var b = document.querySelector('[data-n="comentados"]');
+    var p = document.querySelector('[data-n="pendientes"]');
     if (a) a.textContent = String(visto);
     if (b) b.textContent = String(comentados);
+    if (p) p.textContent = String(all.length - revisadas);
+    var bar = document.querySelector("[data-progress-bar]");
+    var lbl = document.querySelector("[data-progress-label]");
+    if (bar && all.length) {
+      bar.style.width = Math.round((revisadas / all.length) * 100) + "%";
+    }
+    if (lbl) {
+      lbl.textContent =
+        revisadas + " de " + all.length + " revisadas";
+    }
   }
 
   /* ¿La tarjeta pasa el filtro activo? */
   function cardMatches(c, f) {
     if (f === "todos") return true;
+    if (f === "pendientes") return !isReviewed(c);
     if (f === "visto") {
       var i = c.querySelector(".nx-check-input");
       return !!(i && i.checked);
