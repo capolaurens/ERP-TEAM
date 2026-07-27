@@ -51,6 +51,12 @@ export default function NorthdecoPage() {
             <button data-filter="revision" type="button">
               Cristal en revisión <span>{models.length - listo}</span>
             </button>
+            <button data-filter="visto" type="button">
+              ✓ Visto bueno <span data-n="visto">0</span>
+            </button>
+            <button data-filter="comentados" type="button">
+              💬 Comentados <span data-n="comentados">0</span>
+            </button>
           </div>
         </div>
       </header>
@@ -123,7 +129,7 @@ export default function NorthdecoPage() {
         <span>Julio 2026</span>
       </footer>
 
-      <script src="/northdeco/gallery.js?v=3" defer />
+      <script src="/northdeco/gallery.js?v=4" defer />
     </div>
   );
 }

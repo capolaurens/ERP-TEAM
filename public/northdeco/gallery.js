@@ -126,6 +126,33 @@
     releaseSlot(card);
   }
 
+  /* Contadores de los filtros "Visto bueno" y "Comentados" (en vivo). */
+  function updateCounts() {
+    var visto = document.querySelectorAll(
+      ".nx-card .nx-check-input:checked",
+    ).length;
+    var comentados = 0;
+    var all = document.querySelectorAll(".nx-card");
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].querySelector(".nx-cmt-item")) comentados++;
+    }
+    var a = document.querySelector('[data-n="visto"]');
+    var b = document.querySelector('[data-n="comentados"]');
+    if (a) a.textContent = String(visto);
+    if (b) b.textContent = String(comentados);
+  }
+
+  /* ¿La tarjeta pasa el filtro activo? */
+  function cardMatches(c, f) {
+    if (f === "todos") return true;
+    if (f === "visto") {
+      var i = c.querySelector(".nx-check-input");
+      return !!(i && i.checked);
+    }
+    if (f === "comentados") return !!c.querySelector(".nx-cmt-item");
+    return c.getAttribute("data-status") === f;
+  }
+
   // --- Feedback (check + comentarios) ---
   function post(payload) {
     return fetch("/api/northdeco", {
@@ -193,6 +220,7 @@
         nEl.textContent = String(n);
         nEl.hidden = false;
       } else nEl.hidden = true;
+      updateCounts();
     }
 
     if (chk) {
@@ -204,6 +232,7 @@
           })
           .finally(function () {
             chk.disabled = false;
+            updateCounts();
           });
       });
     }
@@ -321,7 +350,7 @@
           b.classList.toggle("on", b === btn);
         });
         cards.forEach(function (c) {
-          var show = f === "todos" || c.getAttribute("data-status") === f;
+          var show = cardMatches(c, f);
           c.style.display = show ? "" : "none";
           if (!show) unmount(c);
         });
