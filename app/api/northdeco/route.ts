@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
 import { prisma } from "@/lib/prisma";
+import { syncNorthdecoFolderBadge } from "@/lib/northdeco-badges";
+
+/** Actualiza el emoji de la carpeta de Drive sin romper la respuesta si falla. */
+async function badge(file: string) {
+  try {
+    await syncNorthdecoFolderBadge(file);
+  } catch (e) {
+    console.error("northdeco badge sync:", e);
+  }
+}
 
 // Feedback público de la galería /northdeco (check + comentarios). Va bajo /api,
 // que el proxy de auth NO intercepta, así que es accesible sin login — cualquiera
@@ -85,6 +95,7 @@ export async function POST(req: NextRequest) {
         create: { file, checked },
         update: { checked },
       });
+      await badge(file);
       return NextResponse.json({ ok: true, file, checked });
     }
 
@@ -104,6 +115,7 @@ export async function POST(req: NextRequest) {
       const c = await prisma.northdecoComment.create({
         data: { file, text, author: author || null },
       });
+      await badge(file);
       return NextResponse.json({
         ok: true,
         comment: {
@@ -123,6 +135,7 @@ export async function POST(req: NextRequest) {
       // Borrado abierto (como un Google Sheets compartido): cualquiera con el
       // enlace puede quitar un comentario. deleteMany = idempotente.
       await prisma.northdecoComment.deleteMany({ where: { id, file } });
+      await badge(file);
       return NextResponse.json({ ok: true });
     }
 
