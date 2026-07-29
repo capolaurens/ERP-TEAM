@@ -355,29 +355,93 @@
             break;
           }
         }
-        if (!touched) cards.forEach(mount);
+        if (!touched) {
+          cards.forEach(function (c) {
+            if (c.style.display !== "none") mount(c);
+          });
+        }
       }, 1500);
     } else {
-      cards.forEach(mount);
+      cards.forEach(function (c) {
+        if (c.style.display !== "none") mount(c);
+      });
     }
 
-    // Filtros.
+    /* ---- Filtros + paginación (40 por página) ---- */
+    var PAGE_SIZE = 40;
+    var currentFilter = "todos";
+    var currentPage = 0;
+    var grid = document.querySelector(".nx-grid");
+
+    function refreshView(scrollToGrid) {
+      var matched = cards.filter(function (c) {
+        return cardMatches(c, currentFilter);
+      });
+      var totalPages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
+      if (currentPage > totalPages - 1) currentPage = totalPages - 1;
+      if (currentPage < 0) currentPage = 0;
+      var start = currentPage * PAGE_SIZE;
+      var end = Math.min(start + PAGE_SIZE, matched.length);
+
+      var shown = {};
+      for (var i = start; i < end; i++) {
+        shown[matched[i].getAttribute("data-file")] = true;
+      }
+      cards.forEach(function (c) {
+        var show = !!shown[c.getAttribute("data-file")];
+        c.style.display = show ? "" : "none";
+        if (!show) unmount(c);
+      });
+
+      var txt = matched.length
+        ? start + 1 + "–" + end + " de " + matched.length
+        : "0 resultados";
+      document.querySelectorAll("[data-page-label]").forEach(function (el) {
+        el.textContent = txt;
+      });
+      document.querySelectorAll("[data-page-prev]").forEach(function (b) {
+        b.disabled = currentPage === 0;
+      });
+      document.querySelectorAll("[data-page-next]").forEach(function (b) {
+        b.disabled = currentPage >= totalPages - 1;
+      });
+
+      if (scrollToGrid && grid) {
+        try {
+          grid.scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (e) {
+          grid.scrollIntoView();
+        }
+      }
+    }
+
     var buttons = Array.prototype.slice.call(
       document.querySelectorAll(".nx-filters button"),
     );
     buttons.forEach(function (btn) {
       btn.addEventListener("click", function () {
-        var f = btn.getAttribute("data-filter");
+        currentFilter = btn.getAttribute("data-filter");
         buttons.forEach(function (b) {
           b.classList.toggle("on", b === btn);
         });
-        cards.forEach(function (c) {
-          var show = cardMatches(c, f);
-          c.style.display = show ? "" : "none";
-          if (!show) unmount(c);
-        });
+        currentPage = 0;
+        refreshView(false);
       });
     });
+    document.querySelectorAll("[data-page-prev]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        currentPage--;
+        refreshView(true);
+      });
+    });
+    document.querySelectorAll("[data-page-next]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        currentPage++;
+        refreshView(true);
+      });
+    });
+
+    refreshView(false);
 
     // Feedback público.
     loadFeedback(cards);

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import Script from "next/script";
 
 export const metadata = {
   title: "Catálogo 3D · Northdeco — NAVYX",
@@ -13,7 +14,13 @@ type Model = {
   name: string;
   status: "listo" | "revision";
   driveId: string;
+  img?: string | null;
 };
+
+/** Foto del CDN de Shopify a tamaño razonable. */
+function photoUrl(src: string): string {
+  return src + (src.includes("?") ? "&" : "?") + "width=900";
+}
 
 export default function NorthdecoPage() {
   const models = JSON.parse(
@@ -69,6 +76,17 @@ export default function NorthdecoPage() {
               Cargando progreso…
             </span>
           </div>
+          <div className="nx-pager" data-pager>
+            <button type="button" className="nx-page-btn" data-page-prev aria-label="Página anterior">
+              ‹
+            </button>
+            <span className="nx-page-lbl" data-page-label>
+              …
+            </span>
+            <button type="button" className="nx-page-btn" data-page-next aria-label="Página siguiente">
+              ›
+            </button>
+          </div>
         </div>
       </header>
 
@@ -82,11 +100,29 @@ export default function NorthdecoPage() {
             data-src={`/api/northdeco/model/${m.driveId}`}
             data-alt={`${m.fam} ${m.name}`}
           >
-            <div className="nx-viewer">
-              <div className="nx-ph" aria-hidden="true" />
-              <span className={`nx-chip ${m.status}`}>
-                {m.status === "listo" ? "Listo" : "En revisión"}
-              </span>
+            <div className="nx-media">
+              <div className="nx-viewer">
+                <div className="nx-ph" aria-hidden="true" />
+                <span className={`nx-chip ${m.status}`}>
+                  {m.status === "listo" ? "Listo" : "En revisión"}
+                </span>
+                <span className="nx-tag">3D</span>
+              </div>
+              <div className="nx-photo">
+                {m.img ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    className="nx-photo-img"
+                    src={photoUrl(m.img)}
+                    alt={`Foto real ${m.fam} ${m.name}`}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div className="nx-photo-empty">Sin foto</div>
+                )}
+                <span className="nx-tag">FOTO</span>
+              </div>
             </div>
             <figcaption>
               <div className="nx-cap">
@@ -132,6 +168,18 @@ export default function NorthdecoPage() {
         ))}
       </div>
 
+      <div className="nx-pager nx-pager-bottom" data-pager>
+        <button type="button" className="nx-page-btn" data-page-prev aria-label="Página anterior">
+          ‹
+        </button>
+        <span className="nx-page-lbl" data-page-label>
+          …
+        </span>
+        <button type="button" className="nx-page-btn" data-page-next aria-label="Página siguiente">
+          ›
+        </button>
+      </div>
+
       <footer className="nx-foot">
         <span>
           Preparado por <b className="nx-mark">NAVYX</b> — Digitalización 3D &amp;
@@ -140,7 +188,7 @@ export default function NorthdecoPage() {
         <span>Julio 2026</span>
       </footer>
 
-      <script src="/northdeco/gallery.js?v=5" defer />
+      <Script src="/northdeco/gallery.js?v=6" strategy="afterInteractive" />
     </div>
   );
 }
@@ -189,8 +237,24 @@ const CSS = `
 .nx-filters button.on{background:var(--brand);color:#fff}
 .nx-filters button.on span{color:rgba(255,255,255,.75)}
 .nx-filters button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-.nx-grid{max-width:1200px;margin:0 auto;display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.nx-grid{max-width:1240px;margin:0 auto;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,560px),1fr));gap:18px}
+.nx-media{display:grid;grid-template-columns:1fr 1fr}
+.nx-photo{position:relative;aspect-ratio:1/1;background:#fff;
+  border-left:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
+.nx-photo-img{max-width:88%;max-height:88%;object-fit:contain}
+.nx-photo-empty{font-size:12.5px;color:#9a938a}
+.nx-tag{position:absolute;bottom:8px;right:10px;font-size:9.5px;font-weight:750;
+  letter-spacing:.09em;padding:2px 8px;border-radius:100px;
+  background:rgba(20,18,14,.45);color:#fff;backdrop-filter:blur(3px);z-index:2}
+.nx-pager{display:flex;align-items:center;gap:12px;margin-top:16px}
+.nx-pager-bottom{max-width:1240px;margin:26px auto 0;justify-content:center}
+.nx-page-btn{width:34px;height:34px;border-radius:100px;border:1px solid var(--line);
+  background:var(--raise);color:var(--ink);font-size:19px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;transition:border-color .12s,color .12s,opacity .12s}
+.nx-page-btn:hover:not(:disabled){border-color:var(--brand);color:var(--brand-ink)}
+.nx-page-btn:disabled{opacity:.32;cursor:default}
+.nx-page-lbl{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:110px;text-align:center}
 .nx-card{margin:0;background:var(--raise);border:1px solid var(--line);border-radius:14px;
   overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
 .nx-viewer{position:relative;aspect-ratio:1/1;background:
