@@ -15,6 +15,7 @@ type Model = {
   status: "listo" | "revision";
   driveId: string;
   img?: string | null;
+  url?: string | null;
 };
 
 /** Foto del CDN de Shopify a tamaño razonable. */
@@ -110,14 +111,22 @@ export default function NorthdecoPage() {
               </div>
               <div className="nx-photo">
                 {m.img ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    className="nx-photo-img"
-                    src={photoUrl(m.img)}
-                    alt={`Foto real ${m.fam} ${m.name}`}
-                    loading="lazy"
-                    decoding="async"
-                  />
+                  <a
+                    className="nx-photo-link"
+                    href={m.url ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Abrir el producto en northdeco.com"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      className="nx-photo-img"
+                      src={photoUrl(m.img)}
+                      alt={`Foto real ${m.fam} ${m.name}`}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </a>
                 ) : (
                   <div className="nx-photo-empty">Sin foto</div>
                 )}
@@ -125,9 +134,21 @@ export default function NorthdecoPage() {
               </div>
             </div>
             <figcaption>
-              <div className="nx-cap">
-                <span className="nx-fam">{m.fam}</span>
-                <span className="nx-name">{m.name}</span>
+              <div className="nx-cap-row">
+                <div className="nx-cap">
+                  <span className="nx-fam">{m.fam}</span>
+                  <span className="nx-name">{m.name}</span>
+                </div>
+                {m.url && (
+                  <a
+                    className="nx-weblink"
+                    href={m.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Ver en la web ↗
+                  </a>
+                )}
               </div>
               <div className="nx-review">
                 <label className="nx-check">
@@ -242,7 +263,13 @@ const CSS = `
 .nx-media{display:grid;grid-template-columns:1fr 1fr}
 .nx-photo{position:relative;aspect-ratio:1/1;background:#fff;
   border-left:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
-.nx-photo-img{max-width:88%;max-height:88%;object-fit:contain}
+.nx-photo-link{position:absolute;inset:0;display:grid;place-items:center}
+.nx-photo-img{max-width:88%;max-height:88%;object-fit:contain;transition:transform .18s ease}
+.nx-photo-link:hover .nx-photo-img{transform:scale(1.03)}
+.nx-cap-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.nx-weblink{font-size:12px;font-weight:620;color:var(--brand-ink);text-decoration:none;
+  white-space:nowrap;margin-top:2px}
+.nx-weblink:hover{text-decoration:underline}
 .nx-photo-empty{font-size:12.5px;color:#9a938a}
 .nx-tag{position:absolute;bottom:8px;right:10px;font-size:9.5px;font-weight:750;
   letter-spacing:.09em;padding:2px 8px;border-radius:100px;
