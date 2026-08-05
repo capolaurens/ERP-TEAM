@@ -16,6 +16,7 @@ type Model = {
   driveId: string;
   img?: string | null;
   url?: string | null;
+  variant?: string | null;
 };
 
 /** Foto del CDN de Shopify a tamaño razonable. */
@@ -136,7 +137,12 @@ export default function NorthdecoPage() {
             <figcaption>
               <div className="nx-cap-row">
                 <div className="nx-cap">
-                  <span className="nx-fam">{m.fam}</span>
+                  <span className="nx-fam">
+                    {m.fam}
+                    {m.variant && (
+                      <span className="nx-variant">{m.variant}</span>
+                    )}
+                  </span>
                   <span className="nx-name">{m.name}</span>
                 </div>
                 {m.url && (
@@ -300,7 +306,10 @@ const CSS = `
 .nx-card figcaption{padding:12px 15px 14px;border-top:1px solid var(--line);
   display:flex;flex-direction:column;gap:10px}
 .nx-cap{display:flex;flex-direction:column;gap:2px}
-.nx-fam{font-size:14px;font-weight:660;letter-spacing:-.01em}
+.nx-fam{font-size:14px;font-weight:660;letter-spacing:-.01em;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.nx-variant{font-size:10.5px;font-weight:640;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--brand-ink);background:color-mix(in srgb,var(--brand-ink) 12%,transparent);
+  padding:2px 8px;border-radius:100px;white-space:nowrap}
 .nx-name{font-size:12.5px;color:var(--faint)}
 /* Barra de revisión */
 .nx-review{display:flex;align-items:center;justify-content:space-between;gap:8px}
