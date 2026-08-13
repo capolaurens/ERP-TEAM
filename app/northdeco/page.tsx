@@ -17,6 +17,21 @@ type Model = {
   img?: string | null;
   url?: string | null;
   variant?: string | null;
+  material?: string | null;
+};
+
+// Etiquetas visibles de los materiales (las claves las genera
+// scripts/enrich-materials.ts en el manifest).
+const MATERIAL_LABELS: Record<string, string> = {
+  madera: "Madera",
+  metal: "Metal",
+  tela: "Tela",
+  plastico: "Plástico",
+  cristal: "Cristal",
+  piel: "Piel",
+  ratan: "Ratán",
+  marmol: "Mármol y piedra",
+  ceramica: "Cerámica",
 };
 
 /** Foto del CDN de Shopify a tamaño razonable. */
@@ -33,6 +48,16 @@ export default function NorthdecoPage() {
   ) as Model[];
 
   const listo = models.filter((m) => m.status === "listo").length;
+
+  // Recuento por material dominante (uno por pieza: los filtros no repiten
+  // muebles), en orden descendente, para los botones de filtro.
+  const matCounts = new Map<string, number>();
+  for (const m of models) {
+    if (m.material) matCounts.set(m.material, (matCounts.get(m.material) ?? 0) + 1);
+  }
+  const materials = [...matCounts.entries()]
+    .filter(([mat]) => MATERIAL_LABELS[mat])
+    .sort((a, b) => b[1] - a[1]);
 
   // Página estática (server component) + JS vanilla en /northdeco/gallery.js.
   // No usa componentes de cliente / hidratación de React: el visor 3D y los
@@ -70,6 +95,16 @@ export default function NorthdecoPage() {
               💬 Comentados <span data-n="comentados">0</span>
             </button>
           </div>
+          <div className="nx-filters nx-mats" aria-label="Filtrar por material">
+            <button className="on" data-mat="todos" type="button">
+              Todos los materiales
+            </button>
+            {materials.map(([mat, n]) => (
+              <button key={mat} data-mat={mat} type="button">
+                {MATERIAL_LABELS[mat]} <span>{n}</span>
+              </button>
+            ))}
+          </div>
           <div className="nx-progress" aria-label="Progreso de la revisión">
             <div className="nx-progress-track">
               <span className="nx-progress-fill" data-progress-bar />
@@ -98,6 +133,7 @@ export default function NorthdecoPage() {
             className="nx-card"
             key={m.file}
             data-status={m.status}
+            data-material={m.material ?? ""}
             data-file={m.file}
             data-src={`/api/northdeco/model/${m.driveId}`}
             data-alt={`${m.fam} ${m.name}`}
@@ -215,7 +251,7 @@ export default function NorthdecoPage() {
         <span>Julio 2026</span>
       </footer>
 
-      <Script src="/northdeco/gallery.js?v=6" strategy="afterInteractive" />
+      <Script src="/northdeco/gallery.js?v=8" strategy="afterInteractive" />
     </div>
   );
 }
@@ -240,7 +276,7 @@ const CSS = `
   }
 }
 .nx *{box-sizing:border-box}
-.nx-head{max-width:900px;margin:0 auto 26px}
+.nx-head{max-width:1240px;margin:0 auto 26px}
 .nx-eyebrow{font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;
   color:var(--brand-ink);display:flex;align-items:center;gap:10px}
 .nx-eyebrow::before{content:"";width:26px;height:1.5px;background:var(--brand)}
@@ -253,8 +289,11 @@ const CSS = `
 .nx-progress-track{flex:1;height:6px;border-radius:100px;background:var(--line);overflow:hidden}
 .nx-progress-fill{display:block;height:100%;width:0;background:var(--brand);border-radius:100px;transition:width .4s ease}
 .nx-progress-lbl{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.nx-filters{display:inline-flex;flex-wrap:wrap;gap:6px;background:var(--raise);
-  border:1px solid var(--line);border-radius:100px;padding:5px}
+.nx-filters{display:flex;flex-wrap:nowrap;gap:6px;background:var(--raise);
+  border:1px solid var(--line);border-radius:100px;padding:5px;
+  width:100%;overflow-x:auto;scrollbar-width:thin}
+.nx-filters button{flex:1 1 auto;justify-content:center;white-space:nowrap}
+.nx-mats{margin-top:8px}
 .nx-filters button{font-family:inherit;font-size:13.5px;font-weight:560;color:var(--muted);
   background:transparent;border:0;border-radius:100px;padding:8px 15px;cursor:pointer;
   display:inline-flex;align-items:center;gap:8px;transition:background .15s,color .15s}

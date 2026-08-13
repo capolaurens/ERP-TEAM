@@ -164,6 +164,14 @@
   }
 
   /* ¿La tarjeta pasa el filtro activo? */
+  // Filtro por material: data-material lleva los materiales del mueble
+  // separados por espacios (puede haber varios, p. ej. "madera metal").
+  function cardMatchesMat(c, mat) {
+    if (mat === "todos") return true;
+    var mats = (c.getAttribute("data-material") || "").split(" ");
+    return mats.indexOf(mat) !== -1;
+  }
+
   function cardMatches(c, f) {
     if (f === "todos") return true;
     if (f === "pendientes") return !isReviewed(c);
@@ -370,12 +378,13 @@
     /* ---- Filtros + paginación (40 por página) ---- */
     var PAGE_SIZE = 40;
     var currentFilter = "todos";
+    var currentMat = "todos";
     var currentPage = 0;
     var grid = document.querySelector(".nx-grid");
 
     function refreshView(scrollToGrid) {
       var matched = cards.filter(function (c) {
-        return cardMatches(c, currentFilter);
+        return cardMatches(c, currentFilter) && cardMatchesMat(c, currentMat);
       });
       var totalPages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
       if (currentPage > totalPages - 1) currentPage = totalPages - 1;
@@ -416,12 +425,26 @@
     }
 
     var buttons = Array.prototype.slice.call(
-      document.querySelectorAll(".nx-filters button"),
+      document.querySelectorAll(".nx-filters button[data-filter]"),
     );
     buttons.forEach(function (btn) {
       btn.addEventListener("click", function () {
         currentFilter = btn.getAttribute("data-filter");
         buttons.forEach(function (b) {
+          b.classList.toggle("on", b === btn);
+        });
+        currentPage = 0;
+        refreshView(false);
+      });
+    });
+
+    var matButtons = Array.prototype.slice.call(
+      document.querySelectorAll(".nx-filters button[data-mat]"),
+    );
+    matButtons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        currentMat = btn.getAttribute("data-mat");
+        matButtons.forEach(function (b) {
           b.classList.toggle("on", b === btn);
         });
         currentPage = 0;

@@ -13,17 +13,26 @@ export function getServiceAccountEmail(): string | null {
   return creds?.client_email ?? null;
 }
 
+// Cliente único: GoogleAuth cachea y renueva el token internamente. Crear un
+// cliente por petición hacía que cada descarga pidiera su propio token a
+// oauth2.googleapis.com; con muchas tarjetas 3D a la vez la ráfaga acababa en
+// ETIMEDOUT y los modelos devolvían 502.
+let cachedClient: ReturnType<typeof driveApi> | null = null;
+
 function getClient() {
   if (!creds) {
     throw new Error(
       "Google Drive no está configurado (falta GOOGLE_SERVICE_ACCOUNT_JSON).",
     );
   }
-  const authClient = new googleAuth.GoogleAuth({
-    credentials: creds,
-    scopes: ["https://www.googleapis.com/auth/drive"],
-  });
-  return driveApi({ version: "v3", auth: authClient });
+  if (!cachedClient) {
+    const authClient = new googleAuth.GoogleAuth({
+      credentials: creds,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    cachedClient = driveApi({ version: "v3", auth: authClient });
+  }
+  return cachedClient;
 }
 
 export type DriveUpload = {
