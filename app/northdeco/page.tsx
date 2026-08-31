@@ -60,6 +60,15 @@ export default function NorthdecoPage() {
     .filter(([mat]) => MATERIAL_LABELS[mat])
     .sort((a, b) => b[1] - a[1]);
 
+  // Familias para el desplegable del buscador: ND-XXXX · nombre (nº piezas).
+  const famInfo = new Map<string, { name: string; count: number }>();
+  for (const m of models) {
+    const f = famInfo.get(m.fam);
+    if (f) f.count++;
+    else famInfo.set(m.fam, { name: m.name, count: 1 });
+  }
+  const familias = [...famInfo.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
   // Página estática (server component) + JS vanilla en /northdeco/gallery.js.
   // No usa componentes de cliente / hidratación de React: el visor 3D y los
   // filtros los mueve un script propio, así que funciona de forma independiente.
@@ -106,6 +115,22 @@ export default function NorthdecoPage() {
               </button>
             ))}
           </div>
+          <div className="nx-search">
+            <input
+              data-q
+              type="search"
+              placeholder="Buscar por SKU, nombre o color…"
+              aria-label="Buscar modelos"
+            />
+            <select data-fam-select aria-label="Filtrar por familia" defaultValue="">
+              <option value="">Todas las familias</option>
+              {familias.map(([fam, info]) => (
+                <option key={fam} value={fam}>
+                  {fam} · {info.name} ({info.count})
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="nx-progress" aria-label="Progreso de la revisión">
             <div className="nx-progress-track">
               <span className="nx-progress-fill" data-progress-bar />
@@ -135,6 +160,8 @@ export default function NorthdecoPage() {
             key={m.file}
             data-status={m.status}
             data-material={m.material ?? ""}
+            data-fam={m.fam}
+            data-search={`${m.sku ?? ""} ${m.fam} ${m.name} ${m.variant ?? ""}`.toLowerCase()}
             data-file={m.file}
             data-src={`/api/northdeco/model/${m.driveId}`}
             data-alt={`${m.fam} ${m.name}`}
@@ -252,7 +279,7 @@ export default function NorthdecoPage() {
         <span>Julio 2026</span>
       </footer>
 
-      <Script src="/northdeco/gallery.js?v=8" strategy="afterInteractive" />
+      <Script src="/northdeco/gallery.js?v=9" strategy="afterInteractive" />
     </div>
   );
 }
@@ -351,6 +378,15 @@ const CSS = `
   color:var(--brand-ink);background:color-mix(in srgb,var(--brand-ink) 12%,transparent);
   padding:2px 8px;border-radius:100px;white-space:nowrap}
 .nx-name{font-size:12.5px;color:var(--faint)}
+/* Buscador por SKU/familia */
+.nx-search{display:flex;gap:10px;flex-wrap:wrap}
+.nx-search input,.nx-search select{background:transparent;border:1px solid var(--line);
+  border-radius:100px;padding:9px 16px;font-size:13px;color:inherit;outline:none;
+  font-family:inherit}
+.nx-search input{flex:1;min-width:220px}
+.nx-search input::placeholder{color:var(--faint)}
+.nx-search select{max-width:340px;cursor:pointer;appearance:auto}
+.nx-search input:focus,.nx-search select:focus{border-color:var(--brand-ink)}
 /* Barra de revisión */
 .nx-review{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .nx-check{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}

@@ -172,6 +172,14 @@
     return mats.indexOf(mat) !== -1;
   }
 
+  /* Buscador: texto libre (SKU/nombre/color) + desplegable de familia. */
+  function cardMatchesSearch(c, q, fam) {
+    if (fam && c.getAttribute("data-fam") !== fam) return false;
+    if (!q) return true;
+    var hay = (c.getAttribute("data-search") || "");
+    return hay.indexOf(q) !== -1;
+  }
+
   function cardMatches(c, f) {
     if (f === "todos") return true;
     if (f === "pendientes") return !isReviewed(c);
@@ -379,12 +387,18 @@
     var PAGE_SIZE = 40;
     var currentFilter = "todos";
     var currentMat = "todos";
+    var currentQ = "";
+    var currentFam = "";
     var currentPage = 0;
     var grid = document.querySelector(".nx-grid");
 
     function refreshView(scrollToGrid) {
       var matched = cards.filter(function (c) {
-        return cardMatches(c, currentFilter) && cardMatchesMat(c, currentMat);
+        return (
+          cardMatches(c, currentFilter) &&
+          cardMatchesMat(c, currentMat) &&
+          cardMatchesSearch(c, currentQ, currentFam)
+        );
       });
       var totalPages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
       if (currentPage > totalPages - 1) currentPage = totalPages - 1;
@@ -451,6 +465,22 @@
         refreshView(false);
       });
     });
+    var qInput = document.querySelector("[data-q]");
+    if (qInput) {
+      qInput.addEventListener("input", function () {
+        currentQ = qInput.value.trim().toLowerCase();
+        currentPage = 0;
+        refreshView(false);
+      });
+    }
+    var famSel = document.querySelector("[data-fam-select]");
+    if (famSel) {
+      famSel.addEventListener("change", function () {
+        currentFam = famSel.value;
+        currentPage = 0;
+        refreshView(true);
+      });
+    }
     document.querySelectorAll("[data-page-prev]").forEach(function (b) {
       b.addEventListener("click", function () {
         currentPage--;
