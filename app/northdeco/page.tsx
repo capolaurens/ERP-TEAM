@@ -18,6 +18,7 @@ type Model = {
   url?: string | null;
   variant?: string | null;
   material?: string | null;
+  sku?: string | null;
 };
 
 // Etiquetas visibles de los materiales (las claves las genera
@@ -174,7 +175,7 @@ export default function NorthdecoPage() {
               <div className="nx-cap-row">
                 <div className="nx-cap">
                   <span className="nx-fam">
-                    {m.fam}
+                    {m.sku ?? m.fam}
                     {m.variant && (
                       <span className="nx-variant">{m.variant}</span>
                     )}

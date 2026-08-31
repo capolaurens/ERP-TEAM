@@ -35,6 +35,7 @@ type Entry = {
   img?: string | null;
   url?: string | null;
   variant?: string | null;
+  sku?: string | null;
 };
 
 const creds = parseServiceAccount(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
@@ -222,6 +223,12 @@ async function main() {
         variant = sufijo.replace(/^ND-\d+-/i, "").replace(/#\d+$/, "").replace(/-/g, " ");
       }
 
+      const sufijoNorm = sufijo.toUpperCase().replace(/\s*-\s*/g, "-").trim();
+      const sku = /^ND-\d+-/.test(sufijoNorm)
+        ? sufijoNorm
+        : sufijoNorm
+          ? `${fam}-${sufijoNorm}`
+          : null;
       nuevos.push({
         file: fileKey,
         fam,
@@ -232,6 +239,7 @@ async function main() {
         img,
         url,
         variant,
+        sku,
       });
     }
   }
