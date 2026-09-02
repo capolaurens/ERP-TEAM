@@ -279,14 +279,16 @@ export default function NorthdecoPage() {
         <span>Julio 2026</span>
       </footer>
 
-      <Script src="/northdeco/gallery.js?v=9" strategy="afterInteractive" />
+      <Script src="/northdeco/gallery.js?v=11" strategy="afterInteractive" />
     </div>
   );
 }
 
 const CSS = `
+/* La galería del cliente va sobre BLANCO puro (el ERP usa un crema suave). */
+body{background:#fff}
 .nx{
-  --paper:#FAF9F6; --raise:#FFFFFF; --ink:#201D19; --muted:#6C665C; --faint:#938B7F;
+  --paper:#FFFFFF; --raise:#FFFFFF; --ink:#201D19; --muted:#6C665C; --faint:#938B7F;
   --line:#E7E2D9; --brand:#1F5450; --brand-ink:#1F5450;
   --ready:#5E863A; --ready-bg:#EEF2E6; --review:#B57F22; --review-bg:#F6EEDD;
   --shadow:0 1px 2px rgba(30,25,18,.04), 0 10px 26px rgba(30,25,18,.06);
@@ -294,14 +296,6 @@ const CSS = `
   min-height:100vh; background:var(--paper); color:var(--ink);
   font-family:var(--sans); -webkit-font-smoothing:antialiased;
   padding:clamp(24px,5vw,56px) clamp(16px,4vw,44px) 40px;
-}
-@media (prefers-color-scheme:dark){
-  .nx{
-    --paper:#141310; --raise:#1D1B16; --ink:#EFEBE2; --muted:#A69E90; --faint:#7E766A;
-    --line:#302C24; --brand:#67B5AD; --brand-ink:#7CC3BB;
-    --ready:#8FB35F; --ready-bg:#1E2417; --review:#D3A24A; --review-bg:#241E12;
-    --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 30px rgba(0,0,0,.4);
-  }
 }
 .nx *{box-sizing:border-box}
 .nx-head{max-width:1240px;margin:0 auto 26px}
@@ -357,8 +351,8 @@ const CSS = `
 .nx-page-lbl{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:110px;text-align:center}
 .nx-card{margin:0;background:var(--raise);border:1px solid var(--line);border-radius:14px;
   overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
-.nx-viewer{position:relative;aspect-ratio:1/1;background:
-  radial-gradient(120% 100% at 50% 0%, rgba(31,84,80,.05), transparent 70%)}
+.nx-viewer{position:relative;aspect-ratio:1/1;background:#fff}
+.nx-viewer model-viewer{--poster-color:#fff;background:#fff}
 .nx-viewer model-viewer{position:absolute;inset:0;width:100%;height:100%}
 .nx-ph{position:absolute;inset:0}
 .nx-ph::after{content:"";position:absolute;inset:0;margin:auto;width:22px;height:22px;

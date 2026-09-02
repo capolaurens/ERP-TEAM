@@ -21,9 +21,11 @@
     loading: "eager",
     "camera-controls": "",
     "touch-action": "pan-y",
-    "auto-rotate": "",
-    "auto-rotate-delay": "0",
-    "rotation-per-second": "16deg",
+    // Vista 3/4 FRONTAL idéntica en todas las piezas (comprobado: el frente de
+    // estos modelos cae en theta 90°). Sin auto-rotate: girando, cada tarjeta
+    // quedaba en un ángulo distinto y el catálogo se veía descolocado; el
+    // cliente puede girar cada modelo a mano con camera-controls.
+    "camera-orbit": "65deg 75deg 105%",
     "interaction-prompt": "none",
     ar: "",
     "ar-modes": "webxr scene-viewer quick-look",
@@ -384,7 +386,7 @@
     }
 
     /* ---- Filtros + paginación (40 por página) ---- */
-    var PAGE_SIZE = 40;
+    var PAGE_SIZE = 60;
     var currentFilter = "todos";
     var currentMat = "todos";
     var currentQ = "";
