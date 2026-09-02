@@ -4,8 +4,15 @@ import path from "node:path";
 import { prisma } from "@/lib/prisma";
 import { syncNorthdecoFolderBadge } from "@/lib/northdeco-badges";
 
-/** Actualiza el emoji de la carpeta de Drive sin romper la respuesta si falla. */
+/**
+ * Emoji de estado (✅/🟡) en el nombre de la carpeta de Drive.
+ * DESACTIVADO a petición del dueño (02-09-2026): las carpetas se quedan con su
+ * nombre limpio "ND-XXXX". Para reactivarlo, poner BADGES_EN_DRIVE = true.
+ */
+const BADGES_EN_DRIVE = false;
+
 async function badge(file: string) {
+  if (!BADGES_EN_DRIVE) return;
   try {
     await syncNorthdecoFolderBadge(file);
   } catch (e) {
