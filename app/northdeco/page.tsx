@@ -1,5 +1,5 @@
 import Script from "next/script";
-import { leerCatalogo } from "@/lib/northdeco-catalogo";
+import { leerGaleria } from "@/lib/northdeco-catalogo";
 
 export const metadata = {
   title: "Catálogo 3D · Northdeco — NAVYX",
@@ -36,10 +36,10 @@ function photoUrl(src: string): string {
 export const dynamic = "force-dynamic";
 
 export default async function NorthdecoPage() {
-  // Catálogo desde la BD, con caída automática al manifest.json si la tabla
-  // está sin sembrar o Postgres falla: la galería del cliente nunca se queda
-  // en blanco por un problema de base de datos.
-  const models = await leerCatalogo();
+  // Catálogo desde la BD (caída automática al manifest.json si la tabla está
+  // sin sembrar o Postgres falla), enseñando SOLO las familias cuya carpeta de
+  // Drive lleva la marca 🟨 — ver lib/northdeco-marcas.ts.
+  const models = await leerGaleria();
 
   const listo = models.filter((m) => m.status === "listo").length;
 

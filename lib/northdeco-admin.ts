@@ -5,6 +5,7 @@ import { invalidarCatalogo } from "@/lib/northdeco-catalogo";
 import { invalidarEscaneo } from "@/lib/northdeco-escaneo";
 import { invalidarAvisos } from "@/lib/northdeco-avisos";
 import { invalidarTecnico } from "@/lib/northdeco-tecnico";
+import { invalidarMarcas } from "@/lib/northdeco-marcas";
 
 /**
  * Cosas comunes a los endpoints de ADMINISTRACIÓN de Northdeco
@@ -64,6 +65,7 @@ export function invalidarCachesNorthdeco(): void {
   invalidarEscaneo(); // foto de Drive del escaneo
   invalidarAvisos(); // informe de avisos + cabeceras GLB
   invalidarTecnico(); // fichas técnicas
+  invalidarMarcas(); // carpetas marcadas 🟨 (visibilidad por familia)
 }
 
 /**
@@ -89,6 +91,7 @@ export function invalidarCachesNorthdeco(): void {
 export function invalidarCachesGaleria(): void {
   invalidar(); // resolver: qué archivo de Drive sirve cada pieza
   invalidarCatalogo(); // catálogo en BD
+  invalidarMarcas(); // carpetas marcadas 🟨 (visibilidad por familia)
 }
 
 /** Traduce un fallo inesperado a un mensaje que se pueda enseñar en el panel. */

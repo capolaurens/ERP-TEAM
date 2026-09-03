@@ -184,22 +184,25 @@ async function listarCarpetas(): Promise<CarpetaDrive[]> {
 }
 
 /**
- * Cuántas carpetas caben en un `q`. Drive acepta consultas largas y cada
- * cláusula ocupa ~50 caracteres, así que 40 se queda en ~2 KB. Con esto el
- * barrido completo (183 carpetas) son 5 llamadas y ~5 s, en vez de una llamada
- * por carpeta (183 llamadas, ~2 minutos) que es lo que costaba listarlas de una
- * en una.
+ * Cuántas carpetas caben en un `q`. OJO: no es un límite de longitud de la
+ * consulta sino de FIABILIDAD. Con lotes grandes (comprobado: a partir de ~20
+ * cláusulas `in parents` en or) Drive omite EN SILENCIO archivos subidos hace
+ * poco — sin error y con `incompleteSearch: false` — y el escaneo daba por
+ * inexistentes GLB que estaban ahí (ND-0949, 2026-09-03). Con lotes de ≤6 los
+ * devuelve todos; 5 deja margen. La velocidad se recupera lanzando varios
+ * lotes en paralelo (PARALELO_LOTES).
  */
-const LOTE_CARPETAS = 40;
+const LOTE_CARPETAS = 5;
+const PARALELO_LOTES = 6;
 
 /** Hijos de un conjunto de carpetas, en lotes. Tampoco filtra la papelera. */
 async function listarArchivos(
   carpetas: CarpetaDrive[],
 ): Promise<ArchivoDrive[]> {
   const porId = new Map(carpetas.map((c) => [c.id, c]));
-  const salida: ArchivoDrive[] = [];
-  for (let i = 0; i < carpetas.length; i += LOTE_CARPETAS) {
-    const lote = carpetas.slice(i, i + LOTE_CARPETAS);
+
+  async function listarLote(lote: CarpetaDrive[]): Promise<ArchivoDrive[]> {
+    const salida: ArchivoDrive[] = [];
     const q = "(" + lote.map((c) => `'${c.id}' in parents`).join(" or ") + ")";
     let pageToken: string | undefined;
     do {
@@ -234,6 +237,18 @@ async function listarArchivos(
       }
       pageToken = r.data.nextPageToken ?? undefined;
     } while (pageToken);
+    return salida;
+  }
+
+  const lotes: CarpetaDrive[][] = [];
+  for (let i = 0; i < carpetas.length; i += LOTE_CARPETAS) {
+    lotes.push(carpetas.slice(i, i + LOTE_CARPETAS));
+  }
+  const salida: ArchivoDrive[] = [];
+  for (let i = 0; i < lotes.length; i += PARALELO_LOTES) {
+    const grupo = lotes.slice(i, i + PARALELO_LOTES);
+    const resultados = await Promise.all(grupo.map(listarLote));
+    for (const r of resultados) salida.push(...r);
   }
   return salida;
 }

@@ -322,6 +322,31 @@ export async function leerCatalogoConOrigen(): Promise<Catalogo> {
   return { ...c, piezas: c.piezas.filter((p) => p.publicada) };
 }
 
+/**
+ * Lo que la GALERÍA enseña de verdad: publicadas Y con la carpeta de su
+ * familia marcada con 🟨 en Drive (ver lib/northdeco-marcas.ts). Quitar el
+ * emoji oculta la familia; ponérselo la muestra, con alta automática en
+ * segundo plano si la familia aún no está en el catálogo.
+ *
+ * Si las marcas no se pueden leer (Drive sin configurar y sin caché previa) se
+ * devuelve el catálogo sin filtrar: mejor enseñar de más un rato que dejar la
+ * galería del cliente en blanco.
+ *
+ * OJO: `leerCatalogo()` / `clavesPublicadas()` siguen SIN filtrar por marca a
+ * propósito — el escaneo del panel compara contra lo publicado en BD, y el
+ * feedback (checks/comentarios) debe seguir aceptándose aunque la familia esté
+ * temporalmente desmarcada.
+ */
+export async function leerGaleria(): Promise<Pieza[]> {
+  const piezas = await leerCatalogo();
+  const { familiasMarcadas, sincronizarAltas } = await import("./northdeco-marcas");
+  const marcadas = await familiasMarcadas();
+  if (!marcadas) return piezas;
+  const todas = await leerCatalogoCompleto();
+  sincronizarAltas(marcadas, new Set(todas.map((p) => p.fam)));
+  return piezas.filter((p) => marcadas.has(p.fam));
+}
+
 /** TODAS las piezas, incluidas las ocultas — para el panel interno. */
 export async function leerCatalogoCompleto(): Promise<Pieza[]> {
   return (await catalogoCacheado()).piezas;

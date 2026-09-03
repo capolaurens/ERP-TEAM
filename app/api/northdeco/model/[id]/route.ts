@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Readable } from "node:stream";
 import { downloadFileStream, isDriveConfigured } from "@/lib/drive";
-import { leerCatalogo } from "@/lib/northdeco-catalogo";
+import { leerGaleria } from "@/lib/northdeco-catalogo";
 import { resolverFileId } from "@/lib/northdeco-resolver";
 
 // Sirve el GLB ORIGINAL de Drive (sin comprimir, máxima calidad) para la galería
@@ -22,8 +22,9 @@ export async function GET(
 
   // La lista blanca sale del catálogo en BD (con caída al manifest si la BD
   // falla), no del JSON del repo: así una pieza dada de alta desde el panel se
-  // puede servir al minuto, sin desplegar.
-  const publicadas = await leerCatalogo();
+  // puede servir al minuto, sin desplegar. Solo familias marcadas 🟨 en Drive:
+  // desmarcar una carpeta también corta la descarga de sus GLB.
+  const publicadas = await leerGaleria();
 
   // El parámetro puede ser la CLAVE de la pieza (recomendado: se resuelve en
   // vivo por nombre en Drive, así una versión nueva se ve sin recablear nada)
