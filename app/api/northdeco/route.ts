@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "node:fs";
-import path from "node:path";
 import { prisma } from "@/lib/prisma";
+import { clavesPublicadas } from "@/lib/northdeco-catalogo";
 import { syncNorthdecoFolderBadge } from "@/lib/northdeco-badges";
 
 /**
@@ -25,21 +24,19 @@ async function badge(file: string) {
 // con el enlace puede dejar su valoración, como en un Google Sheets compartido.
 export const runtime = "nodejs";
 
-// Solo aceptamos ficheros que existan en el manifest (evita escrituras basura).
-let VALID: Set<string> | null = null;
-function validFiles(): Set<string> {
-  if (VALID) return VALID;
-  try {
-    const raw = fs.readFileSync(
-      path.join(process.cwd(), "public/northdeco/manifest.json"),
-      "utf8",
-    );
-    VALID = new Set((JSON.parse(raw) as { file: string }[]).map((m) => m.file));
-  } catch {
-    VALID = new Set();
-  }
-  return VALID;
-}
+// Solo aceptamos claves que existan en el CATÁLOGO PUBLICADO (evita escrituras
+// basura). Sale de lib/northdeco-catalogo.ts, NO de public/northdeco/manifest.json.
+//
+// Antes esto era un Set de módulo leído del JSON del repo una sola vez y sin
+// caducidad. Desde que el catálogo vive en Postgres eso rechazaba con "Modelo no
+// válido" justo las piezas dadas de alta desde /revision: el cliente las veía en
+// la galería y podía girarlas, pero al dar el visto bueno o comentar recibía un
+// 400 — el fallo más difícil de diagnosticar, porque la pieza estaba a la vista.
+//
+// `clavesPublicadas()` sale de la misma caché de 60 s que usan la galería y el
+// proxy del GLB, y el alta la vacía, así que una pieza nueva acepta feedback al
+// instante. Si Postgres falla, el catálogo cae solo al manifest y esta lista
+// vuelve a ser exactamente la de antes: nunca se queda vacía rechazándolo todo.
 
 export async function GET() {
   try {
@@ -94,7 +91,9 @@ export async function POST(req: NextRequest) {
   }
 
   const file = typeof body.file === "string" ? body.file : "";
-  if (!file || !validFiles().has(file)) {
+  // `clavesPublicadas()` no lanza (el catálogo absorbe los fallos de BD cayendo
+  // al manifest), así que puede ir fuera del try sin dejar la ruta sin red.
+  if (!file || !(await clavesPublicadas()).has(file)) {
     return NextResponse.json({ error: "Modelo no válido" }, { status: 400 });
   }
 

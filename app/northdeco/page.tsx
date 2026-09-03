@@ -1,24 +1,10 @@
-import fs from "node:fs";
-import path from "node:path";
 import Script from "next/script";
+import { leerCatalogo } from "@/lib/northdeco-catalogo";
 
 export const metadata = {
   title: "Catálogo 3D · Northdeco — NAVYX",
   description:
     "Galería 3D interactiva del catálogo de Northdeco. Gira cada mueble 360° y pruébalo en tu espacio con realidad aumentada.",
-};
-
-type Model = {
-  file: string;
-  fam: string;
-  name: string;
-  status: "listo" | "revision";
-  driveId: string;
-  img?: string | null;
-  url?: string | null;
-  variant?: string | null;
-  material?: string | null;
-  sku?: string | null;
 };
 
 // Etiquetas visibles de los materiales (las claves las genera
@@ -40,13 +26,20 @@ function photoUrl(src: string): string {
   return src + (src.includes("?") ? "&" : "?") + "width=900";
 }
 
-export default function NorthdecoPage() {
-  const models = JSON.parse(
-    fs.readFileSync(
-      path.join(process.cwd(), "public/northdeco/manifest.json"),
-      "utf8",
-    ),
-  ) as Model[];
+/**
+ * El catálogo ya no es un JSON del repo sino una tabla: sin esto Next hornearía
+ * la página en el build y una pieza dada de alta desde el panel no aparecería
+ * hasta el siguiente despliegue, que es justo lo que se quería evitar.
+ * No pesa: `leerCatalogo()` cachea 60 s en memoria, así que renderizar en cada
+ * visita no supone una consulta a Postgres por visita.
+ */
+export const dynamic = "force-dynamic";
+
+export default async function NorthdecoPage() {
+  // Catálogo desde la BD, con caída automática al manifest.json si la tabla
+  // está sin sembrar o Postgres falla: la galería del cliente nunca se queda
+  // en blanco por un problema de base de datos.
+  const models = await leerCatalogo();
 
   const listo = models.filter((m) => m.status === "listo").length;
 

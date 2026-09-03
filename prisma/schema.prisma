@@ -350,3 +350,54 @@ model NorthdecoComment {
 
   @@index([file])
 }
+
+/// CATÁLOGO de la galería 3D de /northdeco. Sustituye a
+/// public/northdeco/manifest.json, que vive en el repo y por tanto obligaba a
+/// un deploy entero para publicar una pieza. El manifest se conserva como red
+/// de seguridad: lib/northdeco-catalogo.ts cae a él si esta tabla está SIN
+/// SEMBRAR o la BD falla, para que la galería del cliente nunca salga vacía.
+///
+/// `file` es la misma cadena con la que NorthdecoReview y NorthdecoComment
+/// enganchan el feedback del cliente (a propósito SIN clave foránea, porque el
+/// feedback puede sobrevivir a una pieza despublicada). Por eso la clave de una
+/// pieza YA EXISTENTE no se recalcula jamás: cambiarla haría desaparecer su
+/// visto bueno y sus comentarios de la ficha sin ningún error visible.
+model NorthdecoPieza {
+  file String @id
+
+  fam    String
+  name   String
+  /// "listo" | "revision" (texto libre en BD para no migrar por un enum).
+  status String @default("listo")
+
+  /// Último id conocido del GLB en Drive. Es solo un RESPALDO: quien manda es
+  /// lib/northdeco-resolver.ts, que busca el archivo por nombre en cada
+  /// petición (Drive sirve por id incluso archivos en la papelera).
+  driveId      String
+  driveName    String?
+  modifiedTime DateTime?
+  /// Int, no BigInt: NextResponse.json() no sabe serializar BigInt y 2 GB
+  /// sobran para un GLB.
+  sizeBytes    Int?
+
+  img       String?
+  url       String?
+  variant   String?
+  sku       String?
+  material  String?
+  materials String[] @default([])
+
+  /// Ocultar en vez de borrar: borrar dejaría huérfanos los comentarios que ya
+  /// dejó el cliente sobre esa pieza.
+  publicada Boolean @default(true)
+  /// Orden visual explícito. Sin él, un findMany no garantiza orden en
+  /// Postgres y el cliente vería las piezas bailar entre visitas, leyéndolo
+  /// como que algo se ha roto. Las altas nuevas van al final (máximo + 1).
+  orden     Int     @default(0)
+
+  creadaEn      DateTime @default(now())
+  actualizadaEn DateTime @updatedAt
+
+  @@index([fam])
+  @@index([publicada, orden])
+}
