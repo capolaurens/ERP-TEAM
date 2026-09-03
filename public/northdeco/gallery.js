@@ -146,6 +146,8 @@
     var visto = 0;
     var comentados = 0;
     var revisadas = 0;
+    var rehechos = 0;
+    var porCorregir = 0;
     for (var i = 0; i < all.length; i++) {
       var chk = all[i].querySelector(".nx-check-input");
       var hasChk = !!(chk && chk.checked);
@@ -153,10 +155,18 @@
       if (hasChk) visto++;
       if (hasCmt) comentados++;
       if (hasChk || hasCmt) revisadas++;
+      if (hasCmt) {
+        if (all[i].getAttribute("data-rehecho") === "1") rehechos++;
+        else porCorregir++;
+      }
     }
     var a = document.querySelector('[data-n="visto"]');
     var b = document.querySelector('[data-n="comentados"]');
     var p = document.querySelector('[data-n="pendientes"]');
+    var rh = document.querySelector('[data-n="rehechos"]');
+    var pc = document.querySelector('[data-n="porcorregir"]');
+    if (rh) rh.textContent = String(rehechos);
+    if (pc) pc.textContent = String(porCorregir);
     if (a) a.textContent = String(visto);
     if (b) b.textContent = String(comentados);
     if (p) p.textContent = String(all.length - revisadas);
@@ -196,6 +206,18 @@
       return !!(i && i.checked);
     }
     if (f === "comentados") return !!c.querySelector(".nx-cmt-item");
+    // Flujo de corrección: una pieza comentada está "por corregir" hasta que
+    // NAVYX la marca como rehecha; si el cliente vuelve a comentar, regresa.
+    if (f === "porcorregir") {
+      return (
+        !!c.querySelector(".nx-cmt-item") && c.getAttribute("data-rehecho") !== "1"
+      );
+    }
+    if (f === "rehechos") {
+      return (
+        !!c.querySelector(".nx-cmt-item") && c.getAttribute("data-rehecho") === "1"
+      );
+    }
     return c.getAttribute("data-status") === f;
   }
 
@@ -259,6 +281,23 @@
     var name = card.querySelector(".nx-cmt-name");
     var send = card.querySelector(".nx-cmt-send");
     var cancel = card.querySelector(".nx-cmt-cancel");
+    var fixBtn = card.querySelector("[data-fix]");
+    var fixLbl = card.querySelector("[data-fix-lbl]");
+
+    /* Estado de corrección de la pieza. "Rehecho" lo marca NAVYX cuando ha
+       vuelto a subir el modelo; si el cliente comenta DESPUÉS, la pieza
+       vuelve sola a "por corregir" (se compara con la fecha del comentario
+       más reciente, en data-last-comment). */
+    function pintarFix() {
+      var n = ul.children.length;
+      if (fixBtn) fixBtn.hidden = n === 0; // solo tiene sentido si hay comentarios
+      var rehecho = card.getAttribute("data-fixed-at") || "";
+      var ultimo = card.getAttribute("data-last-comment") || "";
+      var vigente = !!rehecho && (!ultimo || rehecho > ultimo);
+      card.setAttribute("data-rehecho", vigente ? "1" : "");
+      if (fixBtn) fixBtn.classList.toggle("on", vigente);
+      if (fixLbl) fixLbl.textContent = vigente ? "Rehecho" : "Marcar rehecho";
+    }
 
     function setCount() {
       var n = ul.children.length;
@@ -266,7 +305,25 @@
         nEl.textContent = String(n);
         nEl.hidden = false;
       } else nEl.hidden = true;
+      pintarFix();
       updateCounts();
+    }
+
+    if (fixBtn) {
+      fixBtn.addEventListener("click", function () {
+        var vigente = card.getAttribute("data-rehecho") === "1";
+        fixBtn.disabled = true;
+        post({ action: "fixed", file: file, fixed: !vigente })
+          .then(function (r) {
+            card.setAttribute("data-fixed-at", (r && r.fixedAt) || "");
+            pintarFix();
+            updateCounts();
+          })
+          .catch(function () {})
+          .finally(function () {
+            fixBtn.disabled = false;
+          });
+      });
     }
 
     if (chk) {
@@ -310,6 +367,11 @@
           .then(function (res) {
             if (res && res.comment) {
               addComment(ul, res.comment, file, setCount);
+              // Un comentario nuevo invalida el "rehecho" anterior: la pieza
+              // vuelve a "por corregir" sin tener que desmarcarla a mano.
+              if (res.comment.createdAt) {
+                card.setAttribute("data-last-comment", res.comment.createdAt);
+              }
               setCount();
               text.value = "";
               form.hidden = true;
@@ -321,7 +383,7 @@
       });
     }
 
-    return { file: file, chk: chk, ul: ul, setCount: setCount };
+    return { file: file, chk: chk, ul: ul, setCount: setCount, pintarFix: pintarFix };
   }
 
   function loadFeedback(cards) {
@@ -336,13 +398,19 @@
       })
       .then(function (data) {
         var checks = (data && data.checks) || {};
+        var fixed = (data && data.fixed) || {};
         var comments = (data && data.comments) || {};
         refs.forEach(function (r) {
           if (checks[r.file] && r.chk) r.chk.checked = true;
+          var card = r.ul.closest(".nx-card");
+          if (card && fixed[r.file]) card.setAttribute("data-fixed-at", fixed[r.file]);
           var list = comments[r.file] || [];
+          var ultimo = "";
           list.forEach(function (c) {
             addComment(r.ul, c, r.file, r.setCount);
+            if (c.createdAt && c.createdAt > ultimo) ultimo = c.createdAt;
           });
+          if (card && ultimo) card.setAttribute("data-last-comment", ultimo);
           r.setCount();
         });
       })

@@ -104,6 +104,12 @@ export default function NorthdecoPage() {
             <button data-filter="comentados" type="button">
               💬 Comentados <span data-n="comentados">0</span>
             </button>
+            <button data-filter="porcorregir" type="button">
+              🔧 Por corregir <span data-n="porcorregir">0</span>
+            </button>
+            <button data-filter="rehechos" type="button">
+              🔁 Rehechos <span data-n="rehechos">0</span>
+            </button>
           </div>
           <div className="nx-filters nx-mats" aria-label="Filtrar por material">
             <button className="on" data-mat="todos" type="button">
@@ -229,6 +235,10 @@ export default function NorthdecoPage() {
                   <span className="nx-box" aria-hidden="true" />
                   <span className="nx-check-lbl">Visto bueno</span>
                 </label>
+                <button type="button" className="nx-fix-btn" data-fix hidden
+                  title="Marcar que ya has vuelto a subir esta pieza corregida">
+                  <span aria-hidden="true">🔁</span> <span data-fix-lbl>Marcar rehecho</span>
+                </button>
                 <button type="button" className="nx-cmt-btn">
                   <span aria-hidden="true">💬</span> Comentar
                   <span className="nx-cmt-n" hidden />
@@ -282,7 +292,7 @@ export default function NorthdecoPage() {
         <span>Julio 2026</span>
       </footer>
 
-      <Script src="/northdeco/gallery.js?v=13" strategy="afterInteractive" />
+      <Script src="/northdeco/gallery.js?v=14" strategy="afterInteractive" />
     </div>
   );
 }
@@ -389,6 +399,11 @@ body{background:#fff}
   font-family:inherit;white-space:nowrap}
 .nx-reload:hover{border-color:var(--brand-ink)}
 .nx-reload[disabled]{opacity:.55;cursor:progress}
+.nx-fix-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;
+  border:1px solid var(--line);border-radius:100px;padding:6px 12px;font-size:12.5px;
+  font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit}
+.nx-fix-btn:hover{border-color:var(--brand-ink);color:var(--brand-ink)}
+.nx-fix-btn.on{background:var(--ready-bg);border-color:transparent;color:var(--ready)}
 /* Barra de revisión */
 .nx-review{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .nx-check{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}

@@ -336,6 +336,9 @@ model NorthdecoReview {
   file      String   @id
   checked   Boolean  @default(false)
   updatedAt DateTime @updatedAt
+  /// Cuándo NAVYX marcó la pieza como rehecha tras un comentario. Si el
+  /// cliente comenta DESPUÉS de esta fecha, la pieza vuelve a "por corregir".
+  fixedAt   DateTime?
 }
 
 model NorthdecoComment {

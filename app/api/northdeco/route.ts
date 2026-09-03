@@ -45,8 +45,7 @@ export async function GET() {
   try {
     const [reviews, comments] = await Promise.all([
       prisma.northdecoReview.findMany({
-        where: { checked: true },
-        select: { file: true },
+        select: { file: true, checked: true, fixedAt: true },
       }),
       prisma.northdecoComment.findMany({
         orderBy: { createdAt: "asc" },
@@ -54,7 +53,11 @@ export async function GET() {
       }),
     ]);
     const checks: Record<string, boolean> = {};
-    for (const r of reviews) checks[r.file] = true;
+    const fixed: Record<string, string> = {};
+    for (const r of reviews) {
+      if (r.checked) checks[r.file] = true;
+      if (r.fixedAt) fixed[r.file] = r.fixedAt.toISOString();
+    }
     const byFile: Record<
       string,
       { id: string; author: string | null; text: string; createdAt: string }[]
@@ -67,10 +70,10 @@ export async function GET() {
         createdAt: c.createdAt.toISOString(),
       });
     }
-    return NextResponse.json({ checks, comments: byFile });
+    return NextResponse.json({ checks, fixed, comments: byFile });
   } catch (e) {
     console.error("northdeco feedback GET:", e);
-    return NextResponse.json({ checks: {}, comments: {} });
+    return NextResponse.json({ checks: {}, fixed: {}, comments: {} });
   }
 }
 
@@ -79,6 +82,7 @@ export async function POST(req: NextRequest) {
     action?: string;
     file?: string;
     checked?: boolean;
+    fixed?: boolean;
     text?: string;
     author?: string;
     id?: string;
@@ -104,6 +108,19 @@ export async function POST(req: NextRequest) {
       });
       await badge(file);
       return NextResponse.json({ ok: true, file, checked });
+    }
+
+    if (body.action === "fixed") {
+      // Lo marca NAVYX cuando ha vuelto a subir la pieza tras un comentario.
+      // Si el cliente comenta más tarde, la comparación de fechas la devuelve
+      // sola a "por corregir" (no hace falta desmarcar a mano).
+      const fixedAt = body.fixed === false ? null : new Date();
+      await prisma.northdecoReview.upsert({
+        where: { file },
+        create: { file, checked: false, fixedAt },
+        update: { fixedAt },
+      });
+      return NextResponse.json({ ok: true, file, fixedAt });
     }
 
     if (body.action === "comment") {
