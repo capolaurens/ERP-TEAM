@@ -29,9 +29,13 @@
     "interaction-prompt": "none",
     ar: "",
     "ar-modes": "webxr scene-viewer quick-look",
-    "shadow-intensity": "0.9",
+    // Render NEUTRO, como el visor de Google Drive: no altera color ni
+    // contraste. "aces" (el tono por defecto) lavaba las maderas claras y
+    // quemaba los brillos; exposure 1.05 sobreexponía.
+    "tone-mapping": "neutral",
+    exposure: "1",
+    "shadow-intensity": "0.2",
     "shadow-softness": "1",
-    exposure: "1.05",
   };
 
   /* --- Carga progresiva ---------------------------------------------------
@@ -95,7 +99,9 @@
       { once: true },
     );
 
-    m.setAttribute("src", card.getAttribute("data-src"));
+    var src = card.getAttribute("data-src");
+    if (window.__ndBust) src += (src.indexOf("?") === -1 ? "?" : "&") + "v=" + window.__ndBust;
+    m.setAttribute("src", src);
     viewer.appendChild(m);
   }
 
@@ -467,6 +473,26 @@
         refreshView(false);
       });
     });
+    var reload = document.querySelector("[data-reload]");
+    if (reload) {
+      reload.addEventListener("click", function () {
+        reload.disabled = true;
+        var txt = reload.textContent;
+        reload.textContent = "↻ Buscando en Drive…";
+        fetch("/api/northdeco/refresh", { method: "POST" })
+          .catch(function () {})
+          .then(function () {
+            // Marca de tiempo para saltarse la caché del navegador y remontaje
+            // de los visores: cada pieza vuelve a pedir su archivo a Drive.
+            window.__ndBust = Date.now();
+            cards.forEach(unmount);
+            refreshView(false);
+            reload.disabled = false;
+            reload.textContent = txt;
+          });
+      });
+    }
+
     var qInput = document.querySelector("[data-q]");
     if (qInput) {
       qInput.addEventListener("input", function () {

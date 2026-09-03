@@ -122,6 +122,9 @@ export default function NorthdecoPage() {
               placeholder="Buscar por SKU, nombre o color…"
               aria-label="Buscar modelos"
             />
+            <button type="button" className="nx-reload" data-reload title="Vuelve a buscar en Drive el archivo de cada pieza">
+              ↻ Actualizar desde Drive
+            </button>
             <select data-fam-select aria-label="Filtrar por familia" defaultValue="">
               <option value="">Todas las familias</option>
               {familias.map(([fam, info]) => (
@@ -163,7 +166,7 @@ export default function NorthdecoPage() {
             data-fam={m.fam}
             data-search={`${m.sku ?? ""} ${m.fam} ${m.name} ${m.variant ?? ""}`.toLowerCase()}
             data-file={m.file}
-            data-src={`/api/northdeco/model/${m.driveId}`}
+            data-src={`/api/northdeco/model/${encodeURIComponent(m.file)}`}
             data-alt={`${m.fam} ${m.name}`}
           >
             <div className="nx-media">
@@ -279,7 +282,7 @@ export default function NorthdecoPage() {
         <span>Julio 2026</span>
       </footer>
 
-      <Script src="/northdeco/gallery.js?v=11" strategy="afterInteractive" />
+      <Script src="/northdeco/gallery.js?v=13" strategy="afterInteractive" />
     </div>
   );
 }
@@ -381,6 +384,11 @@ body{background:#fff}
 .nx-search input::placeholder{color:var(--faint)}
 .nx-search select{max-width:340px;cursor:pointer;appearance:auto}
 .nx-search input:focus,.nx-search select:focus{border-color:var(--brand-ink)}
+.nx-reload{background:transparent;border:1px solid var(--line);border-radius:100px;
+  padding:9px 16px;font-size:13px;font-weight:600;color:var(--brand-ink);cursor:pointer;
+  font-family:inherit;white-space:nowrap}
+.nx-reload:hover{border-color:var(--brand-ink)}
+.nx-reload[disabled]{opacity:.55;cursor:progress}
 /* Barra de revisión */
 .nx-review{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .nx-check{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}

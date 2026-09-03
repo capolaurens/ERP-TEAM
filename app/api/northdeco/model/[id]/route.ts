@@ -3,6 +3,7 @@ import { Readable } from "node:stream";
 import fs from "node:fs";
 import path from "node:path";
 import { downloadFileStream, isDriveConfigured } from "@/lib/drive";
+import { resolverFileId } from "@/lib/northdeco-resolver";
 
 // Sirve el GLB ORIGINAL de Drive (sin comprimir, máxima calidad) para la galería
 // pública /northdeco. El ERP hace de intermediario con la cuenta de servicio, así
@@ -12,14 +13,13 @@ import { downloadFileStream, isDriveConfigured } from "@/lib/drive";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-function allowedIds(): Set<string> {
+function manifest(): { file: string; driveId?: string }[] {
   try {
-    const m = JSON.parse(
+    return JSON.parse(
       fs.readFileSync(path.join(process.cwd(), "public", "northdeco", "manifest.json"), "utf8"),
-    ) as { driveId?: string }[];
-    return new Set(m.map((x) => x.driveId).filter(Boolean) as string[]);
+    ) as { file: string; driveId?: string }[];
   } catch {
-    return new Set();
+    return [];
   }
 }
 
@@ -28,16 +28,27 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  if (!id || !allowedIds().has(id)) {
-    return new NextResponse("No encontrado", { status: 404 });
+  const items = manifest();
+  if (!id) return new NextResponse("No encontrado", { status: 404 });
+
+  // El parámetro puede ser la CLAVE de la pieza (recomendado: se resuelve en
+  // vivo por nombre en Drive, así una versión nueva se ve sin recablear nada)
+  // o un fileId del manifest (compatibilidad con enlaces antiguos).
+  let fileId: string | null = null;
+  if (items.some((m) => m.file === id)) {
+    fileId = await resolverFileId(id);
+  } else if (items.some((m) => m.driveId === id)) {
+    fileId = id;
   }
+  if (!fileId) return new NextResponse("No encontrado", { status: 404 });
+
   if (!isDriveConfigured()) {
     return new NextResponse("Drive no configurado", { status: 503 });
   }
 
   let dl;
   try {
-    dl = await downloadFileStream(id);
+    dl = await downloadFileStream(fileId);
   } catch (err) {
     console.error(`[api/northdeco/model/${id}] fallo al descargar:`, err);
     return new NextResponse("No se pudo cargar el modelo", { status: 502 });
@@ -49,8 +60,9 @@ export async function GET(
 
   const headers: Record<string, string> = {
     "Content-Type": contentType,
-    // Cache moderado: reemplazar el modelo en Drive se refleja en unos minutos.
-    "Cache-Control": "public, max-age=300",
+    // Caché corta: una versión nueva en Drive se ve en un minuto. El botón
+    // "Actualizar desde Drive" de la galería fuerza la recarga al instante.
+    "Cache-Control": "public, max-age=60",
   };
   if (dl.size) headers["Content-Length"] = String(dl.size);
 
