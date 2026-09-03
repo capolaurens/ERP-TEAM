@@ -1,43 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Readable } from "node:stream";
-import fs from "node:fs";
-import path from "node:path";
 import { downloadFileStream, isDriveConfigured } from "@/lib/drive";
+import { leerCatalogo } from "@/lib/northdeco-catalogo";
 import { resolverFileId } from "@/lib/northdeco-resolver";
 
 // Sirve el GLB ORIGINAL de Drive (sin comprimir, máxima calidad) para la galería
 // pública /northdeco. El ERP hace de intermediario con la cuenta de servicio, así
 // que el cliente NO necesita acceso a Drive. Público (bajo /api, sin login), pero
-// solo sirve fileIds que estén en el manifest (no cualquier archivo de Drive).
+// solo sirve piezas PUBLICADAS del catálogo (no cualquier archivo de Drive, ni
+// las piezas ocultas que el equipo aún está preparando).
 // Streaming: no bufferiza el archivo en memoria (los originales pesan ~20MB).
 export const runtime = "nodejs";
 export const maxDuration = 120;
-
-function manifest(): { file: string; driveId?: string }[] {
-  try {
-    return JSON.parse(
-      fs.readFileSync(path.join(process.cwd(), "public", "northdeco", "manifest.json"), "utf8"),
-    ) as { file: string; driveId?: string }[];
-  } catch {
-    return [];
-  }
-}
 
 export async function GET(
   _req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  const items = manifest();
   if (!id) return new NextResponse("No encontrado", { status: 404 });
+
+  // La lista blanca sale del catálogo en BD (con caída al manifest si la BD
+  // falla), no del JSON del repo: así una pieza dada de alta desde el panel se
+  // puede servir al minuto, sin desplegar.
+  const publicadas = await leerCatalogo();
 
   // El parámetro puede ser la CLAVE de la pieza (recomendado: se resuelve en
   // vivo por nombre en Drive, así una versión nueva se ve sin recablear nada)
-  // o un fileId del manifest (compatibilidad con enlaces antiguos).
+  // o el driveId guardado (compatibilidad con enlaces antiguos).
   let fileId: string | null = null;
-  if (items.some((m) => m.file === id)) {
+  if (publicadas.some((m) => m.file === id)) {
     fileId = await resolverFileId(id);
-  } else if (items.some((m) => m.driveId === id)) {
+  } else if (publicadas.some((m) => m.driveId === id)) {
     fileId = id;
   }
   if (!fileId) return new NextResponse("No encontrado", { status: 404 });
