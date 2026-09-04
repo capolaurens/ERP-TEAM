@@ -202,41 +202,82 @@ export function completarDesdeShopify(): void {
       }
       const keys = [...bySku.keys()];
 
+      // Productos de cada familia (por prefijo de SKU laxo), para el 2º escalón.
+      const productosDeFam = (famKey: string): Product[] => {
+        const out = new Set<Product>();
+        for (const [k, hit] of bySku) if (k.startsWith(famKey)) out.add(hit.p);
+        return [...out];
+      };
+
       let completadas = 0;
       const sinMatch: string[] = [];
       for (const pieza of pendientes) {
         const k = loose(pieza.sku!);
+        const famKey = loose(pieza.fam);
         let hit = bySku.get(k);
         if (!hit) {
           // errata: el más parecido dentro de la misma familia
-          const famKey = loose(pieza.fam);
           const cand = keys
             .filter((x) => x.startsWith(famKey))
             .map((x) => ({ x, d: editDistance(k, x) }))
             .sort((a, b) => a.d - b.d)[0];
           if (cand && cand.d <= 2) hit = bySku.get(cand.x);
         }
-        if (!hit) {
+
+        let img: string | null = null;
+        let url: string | null = null;
+        let variant: string | null = null;
+        let producto: Product | null = null;
+
+        if (hit) {
+          producto = hit.p;
+          img = imageFor(hit.p, hit.v);
+          url = `https://northdeco.com/products/${hit.p.handle}?variant=${hit.v.id}`;
+          variant = hit.v.title !== "Default Title" ? hit.v.title : null;
+        } else {
+          // 2º escalón: el SKU no es una variante de la tienda (p. ej. "ND-0112"
+          // a secas, o sufijos tipo "CHEVAL MESA1"). Si la familia tiene UN solo
+          // producto, se usa su ficha; la foto principal SOLO si el SKU no
+          // nombra ningún color (la regla de oro: jamás la foto de otro color).
+          const candidatos = productosDeFam(famKey);
+          if (candidatos.length === 1) {
+            producto = candidatos[0];
+            url = `https://northdeco.com/products/${producto.handle}`;
+            const colorPieza = colorsOf(`${pieza.sku} ${pieza.variant ?? ""}`);
+            if (!colorPieza.size) {
+              img = producto.images?.[0]?.src ?? null;
+            } else {
+              // Con color conocido, solo una variante de ese color sirve.
+              const v = producto.variants.find((x) =>
+                sameColor(`${x.title} ${x.sku ?? ""}`, `${pieza.sku} ${pieza.variant ?? ""}`),
+              );
+              if (v) {
+                img = imageFor(producto, v);
+                url = `https://northdeco.com/products/${producto.handle}?variant=${v.id}`;
+                variant = v.title !== "Default Title" ? v.title : null;
+              }
+            }
+          }
+        }
+
+        if (!producto) {
           sinMatch.push(pieza.sku!);
           continue;
         }
 
-        const img = imageFor(hit.p, hit.v);
-        const url = `https://northdeco.com/products/${hit.p.handle}?variant=${hit.v.id}`;
-        const variant = hit.v.title !== "Default Title" ? hit.v.title : null;
-        const tags = Array.isArray(hit.p.tags) ? hit.p.tags.join(" ") : (hit.p.tags ?? "");
-        const desc = (hit.p.body_html ?? "").replace(/<[^>]+>/g, " ");
-        const mat = pickMaterial([hit.p.handle, hit.p.product_type ?? "", tags, desc]);
+        const tags = Array.isArray(producto.tags) ? producto.tags.join(" ") : (producto.tags ?? "");
+        const desc = (producto.body_html ?? "").replace(/<[^>]+>/g, " ");
+        const mat = pickMaterial([producto.handle, producto.product_type ?? "", tags, desc]);
 
         await prisma.northdecoPieza.update({
           where: { file: pieza.file },
           data: {
             img: img ?? pieza.img,
-            url,
+            url: url ?? pieza.url,
             variant: variant ?? pieza.variant,
             // El alta pone el SKU de nombre provisional: cámbialo por el título
             // real del producto. Un nombre puesto a mano no se toca.
-            ...(pieza.name === pieza.sku ? { name: hit.p.title } : {}),
+            ...(pieza.name === pieza.sku ? { name: producto.title } : {}),
             ...(pieza.material ? {} : { material: mat.material, materials: mat.all }),
           },
         });
