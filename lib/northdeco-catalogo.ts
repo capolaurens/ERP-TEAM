@@ -339,6 +339,15 @@ export async function leerCatalogoConOrigen(): Promise<Catalogo> {
  */
 export async function leerGaleria(): Promise<Pieza[]> {
   const piezas = await leerCatalogo();
+
+  // Fichas nacidas del alta automática, aún sin foto/URL/material: se
+  // completan solas contra Shopify, en segundo plano (candado y cooldown
+  // dentro de completarDesdeShopify).
+  if (piezas.some((p) => p.sku && (!p.img || !p.url || !p.material))) {
+    const { completarDesdeShopify } = await import("./northdeco-shopify");
+    completarDesdeShopify();
+  }
+
   const { familiasMarcadas, sincronizarAltas } = await import("./northdeco-marcas");
   const marcadas = await familiasMarcadas();
   if (!marcadas) return piezas;
