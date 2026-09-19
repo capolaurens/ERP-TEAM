@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { prisma } from "./prisma";
+import { FOTOS_A_MANO } from "./northdeco-fotos-a-mano";
+import { RETIRADAS, SUSTITUIDAS } from "./northdeco-retiradas";
 
 /**
  * CATÁLOGO de la galería 3D de /northdeco, leído de la BD (NorthdecoPieza).
@@ -323,6 +325,32 @@ export async function leerCatalogoConOrigen(): Promise<Catalogo> {
 }
 
 /**
+ * Quita las tarjetas retiradas a mano (lib/northdeco-retiradas.ts), y las
+ * sustituidas cuando la que las sustituye ya está entre las visibles.
+ */
+function sinRetiradas(piezas: Pieza[]): Pieza[] {
+  const visibles = new Set(piezas.map((p) => normalizarClave(p.file)));
+  return piezas.filter((p) => {
+    const k = normalizarClave(p.file);
+    if (RETIRADAS.has(k)) return false;
+    const sustituta = SUSTITUIDAS[k];
+    return !(sustituta && visibles.has(sustituta));
+  });
+}
+
+/**
+ * Foto de referencia a mano (lib/northdeco-fotos-a-mano.ts): cuando la tienda
+ * tiene la foto de otra variante o de otro producto puesta en esa ficha, la
+ * tarjeta enseña la buena, o ninguna si no la hay. Se aplica al servir, no se
+ * escribe en la BD: el cruce con Shopify la volveria a pisar.
+ */
+function conFotoAMano(p: Pieza): Pieza {
+  const k = normalizarClave(p.sku ?? p.file);
+  if (!(k in FOTOS_A_MANO)) return p;
+  return { ...p, img: FOTOS_A_MANO[k] };
+}
+
+/**
  * Lo que la GALERÍA enseña de verdad: publicadas Y con la carpeta de su
  * familia marcada con 🟨 en Drive (ver lib/northdeco-marcas.ts). Quitar el
  * emoji oculta la familia; ponérselo la muestra, con alta automática en
@@ -350,10 +378,9 @@ export async function leerGaleria(): Promise<Pieza[]> {
 
   const { familiasMarcadas, sincronizarAltas } = await import("./northdeco-marcas");
   const marcadas = await familiasMarcadas();
-  if (!marcadas) return piezas;
-  const todas = await leerCatalogoCompleto();
-  sincronizarAltas(marcadas, new Set(todas.map((p) => p.fam)));
-  return piezas.filter((p) => marcadas.has(p.fam));
+  if (!marcadas) return sinRetiradas(piezas).map(conFotoAMano);
+  sincronizarAltas(marcadas);
+  return sinRetiradas(piezas.filter((p) => marcadas.has(p.fam))).map(conFotoAMano);
 }
 
 /** TODAS las piezas, incluidas las ocultas — para el panel interno. */

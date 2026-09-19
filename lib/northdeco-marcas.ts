@@ -102,14 +102,20 @@ let altaEnCurso = false;
 let ultimoIntento = 0;
 
 /**
- * Da de alta EN SEGUNDO PLANO las familias marcadas que no tienen ninguna
- * pieza en el catálogo (el caso "acabo de marcar una carpeta nueva"). No se
- * espera (`void sincronizarAltas(...)`): la primera visita tras marcar la
- * carpeta dispara el alta y las siguientes ya la ven publicada.
+ * Da de alta EN SEGUNDO PLANO los GLB de las familias marcadas 🟨 que el
+ * catálogo todavía no conoce: una familia recién marcada entera, y también las
+ * variantes nuevas que se suben a una familia ya publicada. Marcar la carpeta
+ * es lo que publica; antes solo se daban de alta familias SIN ninguna pieza en
+ * el catálogo, y una variante nueva de una familia publicada se quedaba
+ * invisible hasta publicarla a mano en /revision.
+ *
+ * Solo entra lo que el catálogo NO conoce (ni publicado ni oculto): una pieza
+ * que un admin despublicó a propósito no vuelve a salir sola aunque su GLB
+ * siga en la carpeta. No se espera (`void sincronizarAltas(...)`): la primera
+ * visita tras subir o marcar dispara el alta y las siguientes ya la ven.
  */
-export function sincronizarAltas(marcadas: Set<string>, famsEnCatalogo: Set<string>): void {
-  const faltan = [...marcadas].filter((f) => !famsEnCatalogo.has(f));
-  if (!faltan.length || altaEnCurso) return;
+export function sincronizarAltas(marcadas: Set<string>): void {
+  if (!marcadas.size || altaEnCurso) return;
   if (Date.now() - ultimoIntento < INTENTO_CADA_MS) return;
   altaEnCurso = true;
   ultimoIntento = Date.now();
@@ -119,15 +125,28 @@ export function sincronizarAltas(marcadas: Set<string>, famsEnCatalogo: Set<stri
       const esc = await import("./northdeco-escaneo");
       const cat = await import("./northdeco-catalogo");
       const informe = await esc.escanearDrive({ alcance: "todo" });
+      const conocidas = new Set<string>();
+      for (const p of await cat.leerCatalogoCompleto()) {
+        conocidas.add(cat.normalizarClave(p.file));
+        if (p.sku) conocidas.add(cat.normalizarClave(p.sku));
+      }
       const claves = informe.sinPublicar
-        .filter((c) => faltan.includes(c.fam))
-        .map((c) => c.file);
-      if (!claves.length) return; // carpetas marcadas pero aún sin GLB válido
+        .filter((c) => marcadas.has(c.fam))
+        .filter(
+          (c) =>
+            !conocidas.has(cat.normalizarClave(c.file)) &&
+            !conocidas.has(cat.normalizarClave(c.sku)),
+        )
+        .map((c) => c.file)
+        // Mismo tope que el alta a mano (MAX_CLAVES): lo que sobre entra en la
+        // siguiente vuelta, pasado el cooldown.
+        .slice(0, 200);
+      if (!claves.length) return; // nada nuevo en las carpetas marcadas
       const r = await esc.publicarPiezas(claves);
       cat.invalidarCatalogo();
       console.log(
         `[northdeco-marcas] alta automática por 🟨: ${r.publicadas.length} publicadas, ` +
-          `${r.reenganchadas.length} reenganchadas, ${r.fallidas.length} fallidas (${faltan.join(", ")})`,
+          `${r.reenganchadas.length} reenganchadas, ${r.fallidas.length} fallidas`,
       );
     } catch (err) {
       // p. ej. catálogo en modo manifest (publicarPiezas se niega): se queda
