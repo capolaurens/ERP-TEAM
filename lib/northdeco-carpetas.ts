@@ -2,6 +2,7 @@ import { drive as driveApi, auth as googleAuth } from "@googleapis/drive";
 import { parseServiceAccount } from "./google-credentials";
 import { famDe, leerGaleria } from "./northdeco-catalogo";
 import { revisionPorFile } from "./northdeco-estado";
+import { sincronizarHoja } from "./northdeco-hoja";
 
 /**
  * EL COLOR DE LA CARPETA DE DRIVE, que es lo que ve el cliente cuando entra en
@@ -169,7 +170,16 @@ export async function aplicarColores(
       });
     }
   }
+  // La hoja va del estado de VERDAD, no de lo que se acabe de renombrar: una
+  // carpeta con marca ajena sigue teniendo su estado y su fila que contarlo.
+  await sincronizarHoja(new Map(familias.map((f) => [f.fam, f.estado])), { simular });
   return { cambios, sinCarpeta, aMano };
+}
+
+/** Estado por familia, que es lo que necesita la hoja de seguimiento. */
+export async function estadoPorFamilia(): Promise<Map<string, EstadoFamilia>> {
+  const familias = await estadoDeLasFamilias();
+  return new Map(familias.map((f) => [f.fam, f.estado]));
 }
 
 /**
@@ -193,4 +203,5 @@ export async function sincronizarCarpetaDe(file: string): Promise<void> {
     requestBody: { name: suya.nombreNuevo! },
     supportsAllDrives: true,
   });
+  await sincronizarHoja(new Map([[suya.fam, suya.estado]]));
 }
