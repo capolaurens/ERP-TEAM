@@ -1,5 +1,6 @@
 import Script from "next/script";
-import { leerGaleria } from "@/lib/northdeco-catalogo";
+import { leerGaleria, normalizarClave } from "@/lib/northdeco-catalogo";
+import { POR_REHACER, revisionPorFile } from "@/lib/northdeco-estado";
 
 export const metadata = {
   title: "Catálogo 3D · Northdeco — NAVYX",
@@ -41,7 +42,22 @@ export default async function NorthdecoPage() {
   // Drive lleva la marca 🟨 — ver lib/northdeco-marcas.ts.
   const models = await leerGaleria();
 
-  const listo = models.filter((m) => m.status === "listo").length;
+  // La etiqueta de cada tarjeta sale de la revisión de verdad (visto bueno y
+  // comentarios del cliente) y de la lista de cristales provisionales, no de la
+  // columna `status`, que nace en "listo" y no la cambia nadie.
+  const revision = await revisionPorFile();
+  const estadoDe = (file: string) => {
+    const r = revision[file];
+    if (r) return r;
+    return POR_REHACER.has(normalizarClave(file)) ? "rehacer" : "sinrevisar";
+  };
+  const ETIQUETA = {
+    listo: "Listo",
+    porcorregir: "Por corregir",
+    rehacer: "Por rehacer",
+    sinrevisar: "En revisión",
+  } as const;
+  const porRehacer = models.filter((m) => POR_REHACER.has(normalizarClave(m.file))).length;
 
   // Recuento por material dominante (uno por pieza: los filtros no repiten
   // muebles), en orden descendente, para los botones de filtro.
@@ -82,12 +98,6 @@ export default async function NorthdecoPage() {
             <button className="on" data-filter="todos" type="button">
               Todos <span>{models.length}</span>
             </button>
-            <button data-filter="listo" type="button">
-              Listos <span>{listo}</span>
-            </button>
-            <button data-filter="revision" type="button">
-              Cristal en revisión <span>{models.length - listo}</span>
-            </button>
             <button data-filter="pendientes" type="button">
               Sin revisar <span data-n="pendientes">…</span>
             </button>
@@ -102,6 +112,9 @@ export default async function NorthdecoPage() {
             </button>
             <button data-filter="rehechos" type="button">
               🔁 Rehechos <span data-n="rehechos">0</span>
+            </button>
+            <button data-filter="porrehacer" type="button">
+              🧊 Cristal por rehacer <span>{porRehacer}</span>
             </button>
           </div>
           <div className="nx-filters nx-mats" aria-label="Filtrar por material">
@@ -161,6 +174,7 @@ export default async function NorthdecoPage() {
             className="nx-card"
             key={m.file}
             data-status={m.status}
+            data-rehacer={POR_REHACER.has(normalizarClave(m.file)) ? "1" : ""}
             data-material={m.material ?? ""}
             data-fam={m.fam}
             data-search={`${m.sku ?? ""} ${m.fam} ${m.name} ${m.variant ?? ""}`.toLowerCase()}
@@ -171,8 +185,8 @@ export default async function NorthdecoPage() {
             <div className="nx-media">
               <div className="nx-viewer">
                 <div className="nx-ph" aria-hidden="true" />
-                <span className={`nx-chip ${m.status}`}>
-                  {m.status === "listo" ? "Listo" : "En revisión"}
+                <span className={`nx-chip ${estadoDe(m.file)}`}>
+                  {ETIQUETA[estadoDe(m.file)]}
                 </span>
                 <span className="nx-tag">3D</span>
               </div>
@@ -369,7 +383,9 @@ body{background:#fff}
   letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:100px;
   backdrop-filter:blur(4px);z-index:2}
 .nx-chip.listo{background:var(--ready-bg);color:var(--ready)}
-.nx-chip.revision{background:var(--review-bg);color:var(--review)}
+.nx-chip.sinrevisar{background:var(--review-bg);color:var(--review)}
+.nx-chip.porcorregir{background:#FBE9E7;color:#B4432B}
+.nx-chip.rehacer{background:#E8EEF5;color:#3B618F}
 .nx-card figcaption{padding:12px 15px 14px;border-top:1px solid var(--line);
   display:flex;flex-direction:column;gap:10px}
 .nx-cap{display:flex;flex-direction:column;gap:2px}

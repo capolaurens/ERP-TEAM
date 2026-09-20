@@ -11,4 +11,9 @@ export const FOTOS_A_MANO: Record<string, string | null> = {
   // destacada), pero conserva sus fotos en el producto. Esta es la frontal.
   ND0299AVOCADOGREEN:
     "https://cdn.shopify.com/s/files/1/0520/3286/4435/files/SillaMaestroND-0299Green_02_98995138-64c4-4e1e-8336-99ac53637cc6.jpg",
+  // Juno Brown: el GLB se llama ND-0936 a secas y la tienda tiene dos
+  // productos Juno (el marrón y el blanco en tres tamaños), así que el cruce
+  // automático no elige. El modelo es el marrón.
+  ND0936:
+    "https://cdn.shopify.com/s/files/1/0520/3286/4435/files/Mesa-ND-0936-Brown-Northdeco-Frontal.jpg",
 };

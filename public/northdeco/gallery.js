@@ -140,6 +140,29 @@
     return !!(i && i.checked) || !!c.querySelector(".nx-cmt-item");
   }
 
+  /* La etiqueta de la esquina dice en qué punto está la pieza: visto bueno del
+     cliente, comentarios sin corregir, cristal provisional pendiente de
+     rehacerse, o nadie la ha mirado todavía. El servidor la pinta igual al
+     cargar; esto la mantiene al día sin recargar la página. */
+  function pintarEtiqueta(card, hasChk, hasCmt) {
+    var chip = card.querySelector(".nx-chip");
+    if (!chip) return;
+    var estado = "sinrevisar";
+    var texto = "En revisión";
+    if (hasChk) {
+      estado = "listo";
+      texto = "Listo";
+    } else if (hasCmt && card.getAttribute("data-rehecho") !== "1") {
+      estado = "porcorregir";
+      texto = "Por corregir";
+    } else if (card.getAttribute("data-rehacer") === "1") {
+      estado = "rehacer";
+      texto = "Por rehacer";
+    }
+    if (chip.className !== "nx-chip " + estado) chip.className = "nx-chip " + estado;
+    if (chip.textContent !== texto) chip.textContent = texto;
+  }
+
   /* Contadores de filtros + barra de progreso de la revisión (en vivo). */
   function updateCounts() {
     var all = document.querySelectorAll(".nx-card");
@@ -159,6 +182,7 @@
         if (all[i].getAttribute("data-rehecho") === "1") rehechos++;
         else porCorregir++;
       }
+      pintarEtiqueta(all[i], hasChk, hasCmt);
     }
     var a = document.querySelector('[data-n="visto"]');
     var b = document.querySelector('[data-n="comentados"]');
@@ -213,6 +237,7 @@
         !!c.querySelector(".nx-cmt-item") && c.getAttribute("data-rehecho") !== "1"
       );
     }
+    if (f === "porrehacer") return c.getAttribute("data-rehacer") === "1";
     if (f === "rehechos") {
       return (
         !!c.querySelector(".nx-cmt-item") && c.getAttribute("data-rehecho") === "1"
