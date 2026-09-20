@@ -5,9 +5,9 @@ import { parseServiceAccount } from "./google-credentials";
  * MARCAS DE VISIBILIDAD de la galería /northdeco desde Drive.
  *
  * La regla de negocio: en la galería solo se ven las piezas cuya carpeta de
- * familia en NORTHDECO lleva el emoji 🟨 en el nombre ("ND-0606 🟨"). Marcar
- * una carpeta la hace aparecer (con alta automática si hace falta) y quitarle
- * el emoji la oculta, sin tocar el ERP.
+ * familia en NORTHDECO lleva 🟨 (por validar) o 🟩 (ya validada) en el nombre
+ * ("ND-0606 🟨"). Marcar una carpeta la hace aparecer (con alta automática si
+ * hace falta) y quitarle el emoji la oculta, sin tocar el ERP.
  *
  * `familiasMarcadas()` hace UNA sola llamada a Drive (listar los nombres de
  * las carpetas hijas de NORTHDECO), cacheada TTL_MS. Es deliberadamente
@@ -20,6 +20,16 @@ import { parseServiceAccount } from "./google-credentials";
  */
 
 export const MARCA = "🟨";
+
+/**
+ * 🟩 es lo mismo que 🟨 para la visibilidad: la carpeta se pone verde cuando el
+ * cliente ha dado el visto bueno a TODAS las piezas del producto (ver
+ * lib/northdeco-carpetas.ts), y seguir viéndolas es justo lo que quiere: poder
+ * volver a mirar lo que ya aprobó. Sin esto, validar un producto lo borraba de
+ * su propia galería.
+ */
+export const MARCA_VALIDADA = "🟩";
+export const MARCAS_VISIBLES = [MARCA, MARCA_VALIDADA];
 
 const NORTHDECO_FOLDER =
   process.env.NORTHDECO_DRIVE_FOLDER ?? "1uQN2kIw36jaXvSS_hY3k-EYdkXaAOAo1";
@@ -77,7 +87,7 @@ export async function familiasMarcadas(): Promise<Set<string> | null> {
       });
       for (const f of res.data.files ?? []) {
         const nombre = String(f.name ?? "");
-        if (nombre.includes(MARCA)) {
+        if (MARCAS_VISIBLES.some((m) => nombre.includes(m))) {
           const fam = famDe(nombre);
           if (fam) fams.add(fam);
         }

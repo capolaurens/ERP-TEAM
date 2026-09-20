@@ -1,21 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { clavesPublicadas } from "@/lib/northdeco-catalogo";
-import { syncNorthdecoFolderBadge } from "@/lib/northdeco-badges";
+import { sincronizarCarpetaDe } from "@/lib/northdeco-carpetas";
 
 /**
- * Emoji de estado (✅/🟡) en el nombre de la carpeta de Drive.
- * DESACTIVADO a petición del dueño (02-09-2026): las carpetas se quedan con su
- * nombre limpio "ND-XXXX". Para reactivarlo, poner BADGES_EN_DRIVE = true.
+ * COLOR DE LA CARPETA DE DRIVE. Cuando el cliente marca la última variante que
+ * le faltaba a un producto, su carpeta pasa de "ND-XXXX 🟨" (por validar) a
+ * "ND-XXXX 🟩" (validado), que es lo que él mismo mira en su Drive y lo que
+ * lee la hoja de seguimiento.
+ *
+ * Antes esto ponía ✅/🟡 y estaba apagado desde el 02-09-2026 porque pisaba el
+ * nombre entero de la carpeta. Ahora solo cambia nuestra marca y respeta las
+ * demás (🟥, 🟦). Va en best-effort: si Drive falla, el feedback ya está
+ * guardado y el color se arregla con
+ * `npx tsx scripts/colorear-carpetas-northdeco.ts --aplicar`.
  */
-const BADGES_EN_DRIVE = false;
-
 async function badge(file: string) {
-  if (!BADGES_EN_DRIVE) return;
   try {
-    await syncNorthdecoFolderBadge(file);
+    await sincronizarCarpetaDe(file);
   } catch (e) {
-    console.error("northdeco badge sync:", e);
+    console.error("northdeco color de carpeta:", e);
   }
 }
 
