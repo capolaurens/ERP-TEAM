@@ -170,10 +170,23 @@ export async function aplicarColores(
       });
     }
   }
-  // La hoja va del estado de VERDAD, no de lo que se acabe de renombrar: una
-  // carpeta con marca ajena sigue teniendo su estado y su fila que contarlo.
-  await sincronizarHoja(new Map(familias.map((f) => [f.fam, f.estado])), { simular });
+  // La hoja va del estado de VERDAD, no de lo que se acabe de renombrar. Lo
+  // unico que se queda fuera es lo que el equipo ha marcado a mano (🟥): si su
+  // carpeta no se toca, su fila tampoco, que las dos dicen lo mismo.
+  await sincronizarHoja(mapaParaLaHoja(familias), { simular });
   return { cambios, sinCarpeta, aMano };
+}
+
+/**
+ * Lo que se le pasa a la hoja: el estado de cada familia, menos las que llevan
+ * una marca del equipo en la carpeta. Esas las lleva una persona.
+ */
+function mapaParaLaHoja(familias: FamiliaEnDrive[]): Map<string, EstadoFamilia> {
+  return new Map(
+    familias
+      .filter((f) => !llevaMarcaAjena(f.nombreActual ?? ""))
+      .map((f) => [f.fam, f.estado]),
+  );
 }
 
 /** Estado por familia, que es lo que necesita la hoja de seguimiento. */
@@ -203,5 +216,5 @@ export async function sincronizarCarpetaDe(file: string): Promise<void> {
     requestBody: { name: suya.nombreNuevo! },
     supportsAllDrives: true,
   });
-  await sincronizarHoja(new Map([[suya.fam, suya.estado]]));
+  await sincronizarHoja(mapaParaLaHoja([suya]));
 }

@@ -11,12 +11,13 @@ import type { EstadoFamilia } from "./northdeco-carpetas";
  *                    no ha dado el visto bueno a todas sus variantes
  *   "DONE"           la carpeta está en 🟩: producto validado entero
  *
- * LO QUE NO SE TOCA. Los demás valores de la columna A los pone el equipo a
- * mano ("SOLO MALLA" cuando aún no hay textura, "MAL" cuando algo falla) y no
- * los escribe nadie desde aquí: una fila así se queda como está hasta que su
- * carpeta entre en el circuito de validación. El resto de columnas (el conteo,
- * la familia, el listado de SKU, el enlace, la categoría y el DONE de siempre)
- * tampoco se tocan.
+ * LO QUE NO SE PISA. Las notas que escribe el equipo ("SOLO MALLA" mientras no
+ * hay textura, "MAL" cuando algo falla, "NO") se quedan donde están mientras el
+ * producto siga pendiente: dicen más que un "falta validar". En cuanto el
+ * cliente valida el producto entero sí se sustituyen por "DONE", porque
+ * entonces la nota se ha quedado vieja. El resto de columnas (el conteo, la
+ * familia, el listado de SKU, el enlace, la categoría y el DONE de siempre) no
+ * se tocan nunca.
  *
  * UNA FILA POR SKU, UNA MARCA POR FAMILIA. La hoja repite la familia en la
  * columna C solo en su primera fila y deja las siguientes en blanco; la marca
@@ -81,8 +82,12 @@ export async function sincronizarHoja(
     const estado = estados.get(fam);
     if (!estado) continue; // familia que no está publicada: no es asunto nuestro
     const antes = (filas[i][0] ?? "").trim();
-    if (A_MANO.includes(antes.toUpperCase())) continue;
     const despues = estado === "validada" ? VALIDADO : PENDIENTE;
+    // Una nota del equipo ("SOLO MALLA" mientras no hay textura, "MAL" cuando
+    // algo falla) manda sobre el amarillo, que no dice nada que ella no diga.
+    // El verde SI la pisa: si el cliente ha validado las piezas, la nota se ha
+    // quedado vieja y lo que hay que ver es que el producto está cerrado.
+    if (despues === PENDIENTE && A_MANO.includes(antes.toUpperCase())) continue;
     if (antes === despues) continue;
     columna[i] = [despues];
     cambios.push({ fila: i + 1, fam, antes, despues });
