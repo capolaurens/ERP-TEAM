@@ -3,6 +3,7 @@ import path from "node:path";
 import { prisma } from "./prisma";
 import { FOTOS_A_MANO } from "./northdeco-fotos-a-mano";
 import { RETIRADAS, SUSTITUIDAS } from "./northdeco-retiradas";
+import { OCULTAS } from "./northdeco-ocultas";
 
 /**
  * CATÁLOGO de la galería 3D de /northdeco, leído de la BD (NorthdecoPieza).
@@ -325,14 +326,15 @@ export async function leerCatalogoConOrigen(): Promise<Catalogo> {
 }
 
 /**
- * Quita las tarjetas retiradas a mano (lib/northdeco-retiradas.ts), y las
- * sustituidas cuando la que las sustituye ya está entre las visibles.
+ * Quita las tarjetas retiradas a mano (lib/northdeco-retiradas.ts), las de
+ * cristal mientras se rehacen (lib/northdeco-ocultas.ts), y las sustituidas
+ * cuando la que las sustituye ya está entre las visibles.
  */
 function sinRetiradas(piezas: Pieza[]): Pieza[] {
   const visibles = new Set(piezas.map((p) => normalizarClave(p.file)));
   return piezas.filter((p) => {
     const k = normalizarClave(p.file);
-    if (RETIRADAS.has(k)) return false;
+    if (RETIRADAS.has(k) || OCULTAS.has(k)) return false;
     const sustituta = SUSTITUIDAS[k];
     return !(sustituta && visibles.has(sustituta));
   });
