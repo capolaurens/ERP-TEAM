@@ -17,6 +17,11 @@ export const RETIRADAS: ReadonlySet<string> = new Set([
   "ND0780",
   "ND0933",
   "ND0950",
+  // Aris: tres tarjetas con nombres de archivo que no son SKU y el mismo
+  // modelo repetido; las sustituyen ND-0893-CLEAR-WALNUT y -GOLDENTEA-WALNUT
+  "ND0893ARISMESA36",
+  "ND0893ARISMESA43",
+  "ND0893ARISMESA46",
   // GLB desaparecido de Drive
   "ND05451",
   "ND0732ND0732NATURAL",

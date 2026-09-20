@@ -113,9 +113,11 @@ export default async function NorthdecoPage() {
             <button data-filter="rehechos" type="button">
               🔁 Rehechos <span data-n="rehechos">0</span>
             </button>
-            <button data-filter="porrehacer" type="button">
-              🧊 Cristal por rehacer <span>{porRehacer}</span>
-            </button>
+            {porRehacer > 0 && (
+              <button data-filter="porrehacer" type="button">
+                🧊 Cristal por rehacer <span>{porRehacer}</span>
+              </button>
+            )}
           </div>
           <div className="nx-filters nx-mats" aria-label="Filtrar por material">
             <button className="on" data-mat="todos" type="button">

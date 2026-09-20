@@ -12,37 +12,15 @@ import { prisma } from "./prisma";
 
 /**
  * Cristales que siguen siendo el modelo provisional que hizo el equipo a mano:
- * láminas planas sin grosor, esquinas vivas y fuera de escala. Se ven de
- * plástico y están pendientes de rehacerse por medidas con
- * `texturizador-glb/vidrio-curvado.mjs` (la Burano ND-0727, la Ona ND-0703 y la
- * Elon ND-0715 ya están rehechas y por eso no salen aquí).
+ * láminas planas sin grosor, esquinas vivas y fuera de escala, pendientes de
+ * rehacerse por medidas con `texturizador-glb/vidrio-curvado.mjs`.
  *
  * Clave laxa del `file` (normalizarClave): "ND-0112-TY-113.glb" → "ND0112TY113".
  */
 export const POR_REHACER: ReadonlySet<string> = new Set([
-  "ND0112TY113", // Helen
-  "ND0586", // Corina
-  "ND0700", // Cheval
-  "ND0700GOLDENTEA",
-  "ND0700SMOKE",
-  "ND0700TEA",
-  "ND0701", // Ottish
-  "ND0728CLEAR", // Jolene
-  "ND0794CLEAR", // Saura
-  "ND0794GOLDENTEA",
-  "ND0794GREEN",
-  "ND0794SMOKE",
-  "ND0794TEA",
-  "ND0795CLEAR", // Tossa
-  "ND0795SMOKE",
-  "ND0795TEA",
-  "ND0844WALNUT", // Michi Noriaki
-  "ND0891CLEAR", // Olivier
-  "ND0891GOLDENTEA",
-  "ND0893ARISMESA36", // Aris
-  "ND0893ARISMESA43",
-  "ND0893ARISMESA46",
-  "ND0916", // Luma
+  // El 2026-09-20 se rehicieron por medidas todos los cristales que había
+  // (Burano, Cheval, Jolene, Saura, Tossa, Olivier, Aris, Corina, Michi, Ona),
+  // así que la lista está vacía. Se vuelve a llenar si aparece otro provisional.
 ]);
 
 /**
