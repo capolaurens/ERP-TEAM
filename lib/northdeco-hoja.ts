@@ -102,3 +102,51 @@ export async function sincronizarHoja(
   if (!w.ok) throw new Error(`hoja: ${w.status} ${(await w.text()).slice(0, 200)}`);
   return cambios;
 }
+
+/**
+ * LOS SKU QUE ENTRAN EN LA GALERÍA, que son los de la hoja y nadie más.
+ *
+ * POR QUÉ. La galería publica sola todo GLB que aparezca en una carpeta 🟨, y
+ * en Drive hay variantes de color de los mismos productos que nadie ha pedido
+ * revisar: el panel decía 235 donde la hoja dice 159 (la Maestro gris y
+ * amarilla, la Elon rosa nude, el taburete Tolik beige...). La hoja es la
+ * lista de trabajo acordada, así que es ella la que dice qué se enseña; Drive
+ * sigue diciendo en qué estado está cada cosa.
+ *
+ * Por clave laxa, que la hoja escribe "ND-0112- TY-113" y el archivo se llama
+ * "ND-0112-TY-113.glb".
+ *
+ * Si la hoja no se puede leer devuelve null y la galería no filtra: mejor
+ * enseñar de más un rato que dejar al cliente con la página en blanco.
+ */
+const TTL_MS = 5 * 60_000;
+let cache: { at: number; skus: Set<string> } | null = null;
+
+/** Igual que normalizarClave del catálogo, aquí para no cruzar los dos módulos. */
+const laxa = (s: string): string =>
+  s
+    .toUpperCase()
+    .replace(/\.GLB$/, "")
+    .replace(/[^A-Z0-9]/g, "");
+
+export async function skusDeLaHoja(): Promise<Set<string> | null> {
+  if (!HOJA || !creds) return null;
+  if (cache && Date.now() - cache.at < TTL_MS) return cache.skus;
+  try {
+    const cab = await cabeceras();
+    const r = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${HOJA}/values/D1:D1000`,
+      { headers: cab },
+    );
+    if (!r.ok) throw new Error(`${r.status}`);
+    const filas: string[][] = (await r.json()).values ?? [];
+    const skus = new Set<string>();
+    for (const [sku] of filas.slice(1)) if (sku?.trim()) skus.add(laxa(sku.trim()));
+    if (!skus.size) return null;
+    cache = { at: Date.now(), skus };
+    return skus;
+  } catch (err) {
+    console.error("[northdeco-hoja] no se pudo leer la lista:", err);
+    return cache?.skus ?? null;
+  }
+}

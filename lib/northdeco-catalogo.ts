@@ -382,7 +382,18 @@ export async function leerGaleria(): Promise<Pieza[]> {
   const marcadas = await familiasMarcadas();
   if (!marcadas) return sinRetiradas(piezas).map(conFotoAMano);
   sincronizarAltas(marcadas);
-  return sinRetiradas(piezas.filter((p) => marcadas.has(p.fam))).map(conFotoAMano);
+  /*
+   * LA HOJA DICE QUÉ SE REVISA, DRIVE EN QUÉ ESTADO ESTÁ. El alta automática
+   * publica todo GLB que aparezca en una carpeta 🟨, y en Drive hay variantes
+   * de color que nadie ha pedido revisar: 235 tarjetas donde la hoja lista
+   * 159. Se queda lo que está en las dos.
+   */
+  const { skusDeLaHoja } = await import("./northdeco-hoja");
+  const enLaHoja = await skusDeLaHoja();
+  const visibles = piezas.filter(
+    (p) => marcadas.has(p.fam) && (!enLaHoja || enLaHoja.has(normalizarClave(p.sku ?? p.file))),
+  );
+  return sinRetiradas(visibles).map(conFotoAMano);
 }
 
 /** TODAS las piezas, incluidas las ocultas — para el panel interno. */
