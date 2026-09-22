@@ -9,15 +9,13 @@
  * las ve: 29 tarjetas, todas "Mesa ... de Cristal Templado".
  *
  * Se quitan al servir, como las retiradas: la fila sigue en la BD con sus
- * comentarios y vuelven con solo borrar su línea de aquí.
+ * comentarios y vuelven con solo borrar su línea de aquí. El 2026-09-22 se
+ * sacaron de aquí Helen (ND-0112), Corina (ND-0586), Michi (ND-0844) y Cos
+ * (ND-0927), que están en la lista que el cliente revisa esta semana.
  *
  * Por clave laxa del `file` (normalizarClave): "ND-0112-TY-113.glb" → "ND0112TY113".
  */
 export const OCULTAS: ReadonlySet<string> = new Set([
-  // Helen
-  "ND0112TY113", // ND-0112-TY-113.glb
-  // Corina
-  "ND0586", // ND-0586.glb
   // Cheval
   "ND0700GOLDENTEA", // ND-0700-GOLDENTEA.glb
   "ND0700SMOKE", // ND-0700-SMOKE.glb
@@ -46,14 +44,10 @@ export const OCULTAS: ReadonlySet<string> = new Set([
   "ND0795CLEAR", // ND-0795-CLEAR.glb
   "ND0795SMOKE", // ND-0795-SMOKE.glb
   "ND0795TEA", // ND-0795-TEA.glb
-  // Michi
-  "ND0844WALNUT", // ND-0844-WALNUT.glb
   // Olivier
   "ND0891CLEAR", // ND-0891-CLEAR.glb
   "ND0891GOLDENTEA", // ND-0891-GOLDENTEA.glb
   // Aris
   "ND0893CLEARWALNUT", // ND-0893-CLEAR-WALNUT.glb
   "ND0893GOLDENTEAWALNUT", // ND-0893-GOLDENTEA-WALNUT.glb
-  // Cos
-  "ND0927CLEAR", // ND-0927-CLEAR.glb
 ]);

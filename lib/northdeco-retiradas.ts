@@ -28,6 +28,10 @@ export const RETIRADAS: ReadonlySet<string> = new Set([
   "ND0786",
   "ND0883",
   "ND0962",
+  // Fuera de la lista de revisión de esta semana (2026-09-22): la hoja las
+  // lista, pero el cliente solo va a mirar las 159 primeras filas
+  "ND0831LEABLACK1P", // ND-0831-LEA-BLACK-1P.glb
+  "ND0715TRANSPARENT", // ND-0715-TRANSPARENT.glb
 ]);
 
 /**
