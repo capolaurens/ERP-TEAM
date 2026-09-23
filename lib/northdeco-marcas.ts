@@ -140,12 +140,19 @@ export function sincronizarAltas(marcadas: Set<string>): void {
         conocidas.add(cat.normalizarClave(p.file));
         if (p.sku) conocidas.add(cat.normalizarClave(p.sku));
       }
+      // Lo que está en la lista cerrada (lib/northdeco-revisadas.ts) se
+      // publica aunque su fila ya exista oculta: la lista manda. Lo demás,
+      // solo si es nuevo del todo (una pieza despublicada a mano se queda así).
+      const { REVISADAS } = await import("./northdeco-revisadas");
+      const enLista = (c: { file: string; sku: string }) =>
+        REVISADAS.has(cat.normalizarClave(c.file)) || REVISADAS.has(cat.normalizarClave(c.sku));
       const claves = informe.sinPublicar
         .filter((c) => marcadas.has(c.fam))
         .filter(
           (c) =>
-            !conocidas.has(cat.normalizarClave(c.file)) &&
-            !conocidas.has(cat.normalizarClave(c.sku)),
+            enLista(c) ||
+            (!conocidas.has(cat.normalizarClave(c.file)) &&
+              !conocidas.has(cat.normalizarClave(c.sku))),
         )
         .map((c) => c.file)
         // Mismo tope que el alta a mano (MAX_CLAVES): lo que sobre entra en la
