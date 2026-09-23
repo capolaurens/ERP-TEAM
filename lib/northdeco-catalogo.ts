@@ -4,6 +4,7 @@ import { prisma } from "./prisma";
 import { FOTOS_A_MANO } from "./northdeco-fotos-a-mano";
 import { RETIRADAS, SUSTITUIDAS } from "./northdeco-retiradas";
 import { OCULTAS } from "./northdeco-ocultas";
+import { REVISADAS } from "./northdeco-revisadas";
 
 /**
  * CATÁLOGO de la galería 3D de /northdeco, leído de la BD (NorthdecoPieza).
@@ -383,15 +384,17 @@ export async function leerGaleria(): Promise<Pieza[]> {
   if (!marcadas) return sinRetiradas(piezas).map(conFotoAMano);
   sincronizarAltas(marcadas);
   /*
-   * LA HOJA DICE QUÉ SE REVISA, DRIVE EN QUÉ ESTADO ESTÁ. El alta automática
+   * LA LISTA DICE QUÉ SE REVISA, DRIVE EN QUÉ ESTADO ESTÁ. El alta automática
    * publica todo GLB que aparezca en una carpeta 🟨, y en Drive hay variantes
-   * de color que nadie ha pedido revisar: 235 tarjetas donde la hoja lista
-   * 159. Se queda lo que está en las dos.
+   * de color que nadie ha pedido revisar. Se queda lo que está en las dos:
+   * carpeta marcada y SKU (o nombre de fichero) en lib/northdeco-revisadas.ts
+   * (antes mandaba la columna D de la hoja; desde el 2026-09-23 la lista
+   * cerrada de 128 que revisó Lorenzo).
    */
-  const { skusDeLaHoja } = await import("./northdeco-hoja");
-  const enLaHoja = await skusDeLaHoja();
   const visibles = piezas.filter(
-    (p) => marcadas.has(p.fam) && (!enLaHoja || enLaHoja.has(normalizarClave(p.sku ?? p.file))),
+    (p) =>
+      marcadas.has(p.fam) &&
+      (REVISADAS.has(normalizarClave(p.sku ?? p.file)) || REVISADAS.has(normalizarClave(p.file))),
   );
   return sinRetiradas(visibles).map(conFotoAMano);
 }
