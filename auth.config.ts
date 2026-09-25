@@ -22,6 +22,8 @@ export default {
 
       // Rutas públicas de cara a cliente (galerías 3D) — sin sesión.
       if (nextUrl.pathname.startsWith("/northdeco")) return true;
+      // /validar: la revisión interna de Lorenzo, sin login como la galería
+      if (nextUrl.pathname.startsWith("/validar")) return true;
 
       if (isOnLogin) {
         if (isLoggedIn) return Response.redirect(new URL("/", nextUrl));
