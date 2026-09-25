@@ -368,7 +368,7 @@ function conFotoAMano(p: Pieza): Pieza {
  * feedback (checks/comentarios) debe seguir aceptándose aunque la familia esté
  * temporalmente desmarcada.
  */
-export async function leerGaleria(): Promise<Pieza[]> {
+export async function leerGaleria(lista: ReadonlySet<string> = REVISADAS): Promise<Pieza[]> {
   const piezas = await leerCatalogo();
 
   // Fichas nacidas del alta automática, aún sin foto/URL/material: se
@@ -394,7 +394,7 @@ export async function leerGaleria(): Promise<Pieza[]> {
   const visibles = piezas.filter(
     (p) =>
       marcadas.has(p.fam) &&
-      (REVISADAS.has(normalizarClave(p.sku ?? p.file)) || REVISADAS.has(normalizarClave(p.file))),
+      (lista.has(normalizarClave(p.sku ?? p.file)) || lista.has(normalizarClave(p.file))),
   );
   return sinRetiradas(visibles).map(conFotoAMano);
 }

@@ -144,8 +144,11 @@ export function sincronizarAltas(marcadas: Set<string>): void {
       // publica aunque su fila ya exista oculta: la lista manda. Lo demás,
       // solo si es nuevo del todo (una pieza despublicada a mano se queda así).
       const { REVISADAS } = await import("./northdeco-revisadas");
+      const { VALIDAR } = await import("./northdeco-validar");
       const enLista = (c: { file: string; sku: string }) =>
-        REVISADAS.has(cat.normalizarClave(c.file)) || REVISADAS.has(cat.normalizarClave(c.sku));
+        [REVISADAS, VALIDAR].some(
+          (l) => l.has(cat.normalizarClave(c.file)) || l.has(cat.normalizarClave(c.sku)),
+        );
       const claves = informe.sinPublicar
         .filter((c) => marcadas.has(c.fam))
         .filter(
