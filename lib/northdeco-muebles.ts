@@ -63,6 +63,7 @@ export function unaPorFamilia(
   const peso = (p: Pieza) => (listas[p.file] === "listo" ? 0 : listas[p.file] === "porcorregir" ? 2 : 1);
   for (const p of piezas) {
     if (saltar(p.file)) continue;
+    if (nombreGenerico(p.name) === "Mueble") continue; // sin título en la tienda: no hay nada que enseñar
     const actual = porFam.get(p.fam);
     if (!actual || peso(p) < peso(actual) || (peso(p) === peso(actual) && p.orden < actual.orden)) {
       porFam.set(p.fam, p);
