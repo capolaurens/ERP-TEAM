@@ -26,6 +26,8 @@
     // quedaba en un ángulo distinto y el catálogo se veía descolocado; el
     // cliente puede girar cada modelo a mano con camera-controls.
     "camera-orbit": "65deg 75deg 105%",
+    // Como el visor de la app de Shopify: no se puede mirar la pieza desde abajo.
+    "max-camera-orbit": "auto 88deg auto",
     "interaction-prompt": "none",
     ar: "",
     "ar-modes": "webxr scene-viewer quick-look",
@@ -210,6 +212,11 @@
   // separados por espacios (puede haber varios, p. ej. "madera metal").
   function cardMatchesMat(c, mat) {
     if (mat === "todos") return true;
+    // "simples" no es un material sino un corte distinto: las piezas de UN SOLO
+    // material, verificadas una a una en lib/northdeco-simples.ts. Va en la
+    // misma fila de botones porque es la misma pregunta ("de qué está hecho")
+    // y así no se pueden combinar dos filtros que se contradicen.
+    if (mat === "simples") return c.getAttribute("data-simple") === "1";
     var mats = (c.getAttribute("data-material") || "").split(" ");
     return mats.indexOf(mat) !== -1;
   }

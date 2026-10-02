@@ -25,6 +25,8 @@
     // quedaba en un ángulo distinto y el catálogo se veía descolocado; el
     // cliente puede girar cada modelo a mano con camera-controls.
     "camera-orbit": "65deg 75deg 105%",
+    // Como el visor de la app de Shopify: no se puede mirar la pieza desde abajo.
+    "max-camera-orbit": "auto 88deg auto",
     "interaction-prompt": "none",
     ar: "",
     "ar-modes": "webxr scene-viewer quick-look",
